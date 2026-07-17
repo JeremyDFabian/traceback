@@ -4,9 +4,12 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.flashcards import (
+    Flashcard,
     FlashcardSourceInput,
     GeneratedFlashcard,
+    GeneratedFlashcardBatch,
     GenerateFlashcardsRequest,
+    GenerateFlashcardsResponse,
 )
 
 
@@ -18,6 +21,10 @@ def source_payload() -> dict[str, object]:
         "note_text": "Key point",
         "slide_text": "Slide text",
     }
+
+
+def generated_flashcard_payload(difficulty: str = "easy") -> dict[str, str]:
+    return {"question": "Question", "answer": "Answer", "difficulty": difficulty}
 
 
 def test_generate_request_defaults_count_to_five() -> None:
@@ -96,3 +103,63 @@ def test_source_parses_session_id_as_uuid() -> None:
     source = FlashcardSourceInput(**source_payload())
 
     assert isinstance(source.session_id, UUID)
+
+
+@pytest.mark.parametrize("difficulty", ["easy", "medium", "hard"])
+def test_generated_flashcard_accepts_required_difficulty(difficulty: str) -> None:
+    flashcard = GeneratedFlashcard(**generated_flashcard_payload(difficulty))
+
+    assert flashcard.difficulty == difficulty
+
+
+@pytest.mark.parametrize(
+    ("model", "payload"),
+    [
+        (GenerateFlashcardsRequest, {"source": source_payload(), "unexpected": True}),
+        (GeneratedFlashcard, {**generated_flashcard_payload(), "unexpected": True}),
+    ],
+)
+def test_contracts_forbid_unexpected_fields(
+    model: type[GenerateFlashcardsRequest] | type[GeneratedFlashcard], payload: dict[str, object]
+) -> None:
+    with pytest.raises(ValidationError):
+        model(**payload)
+
+
+@pytest.mark.parametrize("flashcards", [[], [generated_flashcard_payload()] * 11])
+def test_generated_flashcard_batch_rejects_invalid_list_size(
+    flashcards: list[dict[str, str]],
+) -> None:
+    with pytest.raises(ValidationError):
+        GeneratedFlashcardBatch(flashcards=flashcards)
+
+
+def test_generate_response_parses_flashcard_source_reference() -> None:
+    response = GenerateFlashcardsResponse(
+        flashcards=[
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174001",
+                **generated_flashcard_payload("medium"),
+                "source": {
+                    "session_id": "123e4567-e89b-12d3-a456-426614174000",
+                    "region_id": "region-1",
+                    "slide_number": 1,
+                },
+            }
+        ]
+    )
+
+    assert response.flashcards[0].source.session_id == UUID("123e4567-e89b-12d3-a456-426614174000")
+
+
+def test_flashcard_rejects_invalid_id() -> None:
+    with pytest.raises(ValidationError):
+        Flashcard(
+            id="not-a-uuid",
+            **generated_flashcard_payload(),
+            source={
+                "session_id": "123e4567-e89b-12d3-a456-426614174000",
+                "region_id": "region-1",
+                "slide_number": 1,
+            },
+        )
