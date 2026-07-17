@@ -1,6 +1,9 @@
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
+from openai import APITimeoutError, OpenAIError
 from pydantic import ValidationError
 
 from app.schemas.flashcards import (
@@ -11,6 +14,7 @@ from app.schemas.flashcards import (
     GenerateFlashcardsRequest,
     GenerateFlashcardsResponse,
 )
+from app.services.flashcards import FlashcardGenerationError, OpenAIFlashcardGenerator
 
 
 def source_payload() -> dict[str, object]:
@@ -25,6 +29,81 @@ def source_payload() -> dict[str, object]:
 
 def generated_flashcard_payload(difficulty: str = "easy") -> dict[str, str]:
     return {"question": "Question", "answer": "Answer", "difficulty": difficulty}
+
+
+def generated_batch(*questions: str) -> GeneratedFlashcardBatch:
+    return GeneratedFlashcardBatch(
+        flashcards=[
+            GeneratedFlashcard(question=question, answer="Answer", difficulty="easy")
+            for question in questions
+        ]
+    )
+
+
+def test_generator_parses_one_flashcard_from_the_source() -> None:
+    client = MagicMock()
+    client.responses.parse.return_value = SimpleNamespace(output_parsed=generated_batch("Question"))
+    source = FlashcardSourceInput(**source_payload())
+
+    cards = OpenAIFlashcardGenerator(client, "test-model").generate(source, 1)
+
+    assert cards == generated_batch("Question").flashcards
+    kwargs = client.responses.parse.call_args.kwargs
+    assert kwargs["model"] == "test-model"
+    assert kwargs["text_format"] is GeneratedFlashcardBatch
+    assert "Create exactly 1 flashcard" in kwargs["input"][1]["content"]
+    assert source.note_text in kwargs["input"][1]["content"]
+
+
+def test_generator_rejects_missing_parsed_output() -> None:
+    client = MagicMock()
+    client.responses.parse.return_value = SimpleNamespace(output_parsed=None)
+
+    with pytest.raises(FlashcardGenerationError, match="no parsed output"):
+        OpenAIFlashcardGenerator(client, "test-model").generate(
+            FlashcardSourceInput(**source_payload()), 1
+        )
+
+
+def test_generator_rejects_wrong_card_count() -> None:
+    client = MagicMock()
+    client.responses.parse.return_value = SimpleNamespace(output_parsed=generated_batch("One"))
+
+    with pytest.raises(FlashcardGenerationError, match="expected 2 cards"):
+        OpenAIFlashcardGenerator(client, "test-model").generate(
+            FlashcardSourceInput(**source_payload()), 2
+        )
+
+
+def test_generator_rejects_normalized_duplicate_questions() -> None:
+    client = MagicMock()
+    client.responses.parse.return_value = SimpleNamespace(
+        output_parsed=generated_batch("What is ATP?", "  what   is   atp?  ")
+    )
+
+    with pytest.raises(FlashcardGenerationError, match="duplicate questions"):
+        OpenAIFlashcardGenerator(client, "test-model").generate(
+            FlashcardSourceInput(**source_payload()), 2
+        )
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        OpenAIError("provider failed"),
+        APITimeoutError(request=MagicMock()),
+        ValidationError.from_exception_data("GeneratedFlashcardBatch", []),
+    ],
+    ids=["openai", "timeout", "validation"],
+)
+def test_generator_wraps_provider_and_parser_errors(error: Exception) -> None:
+    client = MagicMock()
+    client.responses.parse.side_effect = error
+
+    with pytest.raises(FlashcardGenerationError, match="provider request failed"):
+        OpenAIFlashcardGenerator(client, "test-model").generate(
+            FlashcardSourceInput(**source_payload()), 1
+        )
 
 
 def test_generate_request_defaults_count_to_five() -> None:
