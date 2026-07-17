@@ -1,0 +1,6 @@
+# Add team GitHub usernames before enabling required code-owner reviews.
+# Ownership boundaries:
+# apps/web/                 Frontend lead
+# apps/api/app/services/   AI and backend leads
+# supabase/                 Backend lead
+# sample-data/              Learning and demo lead

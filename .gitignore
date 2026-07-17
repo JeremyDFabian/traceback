@@ -1,0 +1,19 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.next/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+coverage/
+dist/
+htmlcov/
+node_modules/
+*.py[cod]
+*.tsbuildinfo
+
+# Local uploads and generated runtime data
+data/
+uploads/

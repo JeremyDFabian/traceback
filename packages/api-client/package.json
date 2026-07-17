@@ -1,0 +1,22 @@
+{
+  "name": "@traceback/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "types": "./src/schema.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/schema.d.ts"
+    }
+  },
+  "scripts": {
+    "format": "prettier --ignore-path ../../.prettierignore --write .",
+    "format:check": "prettier --ignore-path ../../.prettierignore --check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,36 @@
+[project]
+name = "traceback-api"
+version = "0.1.0"
+description = "Traceback FastAPI service"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "psycopg[binary]>=3.2,<4",
+    "pydantic-settings>=2.7,<3",
+    "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=1,<3",
+    "pyright>=1.1.400,<2",
+    "pytest>=8.3,<9",
+    "ruff>=0.9,<1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pyright]
+include = ["app"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"

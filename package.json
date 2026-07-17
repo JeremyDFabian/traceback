@@ -1,0 +1,17 @@
+{
+  "name": "traceback",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "corepack pnpm --recursive --if-present build",
+    "dev": "corepack pnpm --parallel --recursive --if-present dev",
+    "format": "corepack pnpm --recursive --if-present format",
+    "format:check": "corepack pnpm --recursive --if-present format:check",
+    "lint": "corepack pnpm --recursive --if-present lint",
+    "test": "corepack pnpm --recursive --if-present test",
+    "typecheck": "corepack pnpm --recursive --if-present typecheck"
+  }
+}
