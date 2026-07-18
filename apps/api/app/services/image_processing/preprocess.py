@@ -19,6 +19,7 @@ class ProcessedNotebookImage:
     height: int
     display_image_base64: str
     analysis_image_base64: str
+    analysis_image_array: np.ndarray
     warnings: list[str]
 
 
@@ -43,6 +44,7 @@ def preprocess_notebook_image(
         height=display_image.height,
         display_image_base64=encode_jpeg_base64(display_image),
         analysis_image_base64=encode_jpeg_base64(analysis_image),
+        analysis_image_array=np.array(analysis_image),
         warnings=warnings,
     )
 
@@ -110,3 +112,4 @@ def decode_base64_image(image_base64: str) -> bytes:
         return base64.b64decode(image_base64, validate=True)
     except binascii.Error as exc:
         raise ValueError("Invalid base64 notebook image.") from exc
+
