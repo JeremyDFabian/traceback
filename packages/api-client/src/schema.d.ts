@@ -38,10 +38,263 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/sessions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Session */
+    post: operations["create_session_api_sessions_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Session */
+    get: operations["get_session_api_sessions__session_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/analysis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Analysis */
+    get: operations["get_analysis_api_sessions__session_id__analysis_get"];
+    put?: never;
+    /** Save Analysis */
+    post: operations["save_analysis_api_sessions__session_id__analysis_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Confirm Analysis */
+    post: operations["confirm_analysis_api_sessions__session_id__confirm_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/deck": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Upload Deck */
+    post: operations["upload_deck_api_sessions__session_id__deck_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/extract-deck": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Extract Session Deck */
+    post: operations["extract_session_deck_api_sessions__session_id__extract_deck_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/flashcards/generate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Generate Flashcards */
+    post: operations["generate_flashcards_api_sessions__session_id__flashcards_generate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/graph": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Graph */
+    get: operations["get_graph_api_sessions__session_id__graph_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/notebook-page": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Upload Notebook Page */
+    post: operations["upload_notebook_page_api_sessions__session_id__notebook_page_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/processing-jobs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Processing Job */
+    post: operations["create_processing_job_api_sessions__session_id__processing_jobs_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/processing-jobs/{job_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Processing Job */
+    get: operations["get_processing_job_api_sessions__session_id__processing_jobs__job_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/regions/{region_id}/match": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Match Session Region */
+    post: operations["match_session_region_api_sessions__session_id__regions__region_id__match_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AnalysisResult */
+    AnalysisResult: {
+      /** Page Summary */
+      page_summary: string;
+      /** Regions */
+      regions: components["schemas"]["Region"][];
+      /** Relationships */
+      relationships: components["schemas"]["Relationship"][];
+    };
+    /** Body_upload_deck_api_sessions__session_id__deck_post */
+    Body_upload_deck_api_sessions__session_id__deck_post: {
+      /** File */
+      file: string;
+    };
+    /** Body_upload_notebook_page_api_sessions__session_id__notebook_page_post */
+    Body_upload_notebook_page_api_sessions__session_id__notebook_page_post: {
+      /** File */
+      file: string;
+    };
+    /** BoundingBox */
+    BoundingBox: {
+      /** Height */
+      height: number;
+      /** Width */
+      width: number;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+    };
+    /** DeckExtractionResponse */
+    DeckExtractionResponse: {
+      /** Session Id */
+      session_id: string;
+      /** Slides */
+      slides: components["schemas"]["ExtractedSlide"][];
+    };
+    /** ExtractedSlide */
+    ExtractedSlide: {
+      /** Height */
+      height: number;
+      /** Slide Number */
+      slide_number: number;
+      /** Spans */
+      spans: components["schemas"]["TextSpan"][];
+      /** Width */
+      width: number;
+    };
     /** Flashcard */
     Flashcard: {
       /** Answer */
@@ -88,6 +341,24 @@ export interface components {
       /** Slide Number */
       slide_number: number;
     };
+    /** FlashcardSuggestion */
+    FlashcardSuggestion: {
+      /** Answer */
+      answer: string;
+      /** Id */
+      id: string;
+      /** Question */
+      question: string;
+      /** Region Id */
+      region_id: string;
+      /** Source Slide */
+      source_slide: number | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "suggested" | "approved" | "rejected";
+    };
     /** GenerateFlashcardsRequest */
     GenerateFlashcardsRequest: {
       /**
@@ -101,6 +372,33 @@ export interface components {
     GenerateFlashcardsResponse: {
       /** Flashcards */
       flashcards: components["schemas"]["Flashcard"][];
+    };
+    /** GraphEdge */
+    GraphEdge: {
+      /** Id */
+      id: string;
+      /** Label */
+      label: string | null;
+      /** Source */
+      source: string;
+      /** Target */
+      target: string;
+    };
+    /** GraphNode */
+    GraphNode: {
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /** Type */
+      type: string;
+    };
+    /** GraphResponse */
+    GraphResponse: {
+      /** Edges */
+      edges: components["schemas"]["GraphEdge"][];
+      /** Nodes */
+      nodes: components["schemas"]["GraphNode"][];
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -119,6 +417,159 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** JobCreateRequest */
+    JobCreateRequest: {
+      /** Stage */
+      stage: string;
+    };
+    /** JobResponse */
+    JobResponse: {
+      /** Completed At */
+      completed_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Error Code */
+      error_code: string | null;
+      /** Error Message */
+      error_message: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Progress */
+      progress: number;
+      /** Result Reference */
+      result_reference: string | null;
+      /** Retryable */
+      retryable: boolean;
+      /**
+       * Session Id
+       * Format: uuid
+       */
+      session_id: string;
+      /** Stage */
+      stage: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "queued" | "processing" | "completed" | "failed";
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** MatchResponse */
+    MatchResponse: {
+      /** Highlights */
+      highlights: components["schemas"]["TextSpan"][];
+      /** Passage */
+      passage: string;
+      /** Reason */
+      reason: string;
+      /** Region Id */
+      region_id: string;
+      /** Similarity Score */
+      similarity_score: number;
+      /** Slide Number */
+      slide_number: number | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "matched" | "uncertain" | "no_match";
+    };
+    /** Region */
+    Region: {
+      bbox: components["schemas"]["BoundingBox"];
+      /** Confidence */
+      confidence: number;
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /**
+       * Markers
+       * @default []
+       */
+      markers?: ("star" | "question" | "highlight" | "circle")[];
+      /** Transcription */
+      transcription: string;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "concept" | "definition" | "question" | "example" | "other";
+    };
+    /** Relationship */
+    Relationship: {
+      /** Confidence */
+      confidence: number;
+      /** Id */
+      id: string;
+      /** Label */
+      label?: string | null;
+      /** Source Region Id */
+      source_region_id: string;
+      /** Target Region Id */
+      target_region_id: string;
+    };
+    /** SessionResponse */
+    SessionResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "created" | "processing" | "ready" | "failed";
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** TextSpan */
+    TextSpan: {
+      /** Height */
+      height: number;
+      /** Text */
+      text: string;
+      /** Width */
+      width: number;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+    };
+    /** UploadResponse */
+    UploadResponse: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "deck" | "notebook_page";
+      /**
+       * Session Id
+       * Format: uuid
+       */
+      session_id: string;
+      /** Storage Path */
+      storage_path: string;
     };
     /** ValidationError */
     ValidationError: {
@@ -191,6 +642,420 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  create_session_api_sessions_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SessionResponse"];
+        };
+      };
+    };
+  };
+  get_session_api_sessions__session_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SessionResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_analysis_api_sessions__session_id__analysis_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AnalysisResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_analysis_api_sessions__session_id__analysis_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AnalysisResult"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AnalysisResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  confirm_analysis_api_sessions__session_id__confirm_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AnalysisResult"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AnalysisResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  upload_deck_api_sessions__session_id__deck_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_deck_api_sessions__session_id__deck_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  extract_session_deck_api_sessions__session_id__extract_deck_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeckExtractionResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  generate_flashcards_api_sessions__session_id__flashcards_generate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FlashcardSuggestion"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_graph_api_sessions__session_id__graph_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GraphResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  upload_notebook_page_api_sessions__session_id__notebook_page_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_notebook_page_api_sessions__session_id__notebook_page_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UploadResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_processing_job_api_sessions__session_id__processing_jobs_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JobCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["JobResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_processing_job_api_sessions__session_id__processing_jobs__job_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["JobResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  match_session_region_api_sessions__session_id__regions__region_id__match_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+        region_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MatchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
