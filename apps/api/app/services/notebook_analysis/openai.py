@@ -13,13 +13,19 @@ Analyze this single photographed notebook page for an interactive study surface.
 Return only the requested structured result.
 
 Rules:
-- Produce clean typed_text from only clearly visible handwritten or printed text.
-- Use the supplied OCR/layout regions as the primary evidence for transcription and
-  bounding boxes. Correct them only when the image makes the correction unambiguous.
-- Every region label must be the actual short concept from the note transcription.
+- First read the supplied OCR/layout JSON as the transcription draft. Use the image to
+  correct obvious OCR character and spelling mistakes only when the handwriting makes
+  the correction unambiguous. Do not invent missing content.
+- Produce typed_text as clean, spaced study notes: preserve headings, use blank lines
+  between sections, and put each detected numbered item on its own line as `1. text`.
+- Use the supplied OCR/layout regions as the primary evidence for bounding boxes.
+- Every region needs a concise label and a highlight_text phrase that appears verbatim
+  in typed_text. highlight_text must be a key study concept of one to five words.
+- Never use a whole sentence, OCR line, heading, or a generic placeholder as
+  highlight_text. Headings stay plain text in the PDF.
 - Use only these region types: concept, definition, question, example, or other.
 - Never use generic labels such as Heading, Subheading, Content, Notes, List, or Definition.
-- Return at most 8 non-overlapping regions for the clearest concepts or headings.
+- Return three to eight unique, non-overlapping regions only when the concepts are clear.
 - Use stable ids: region_1, region_2, and relationship_1, relationship_2.
 - Bounding boxes are normalized to 0.0 through 1.0 relative to the entire image.
 - Add at most 6 relationships, only for unambiguous drawn arrows or connecting lines.
@@ -77,8 +83,12 @@ def analyze_notebook_with_openai(
             text_format=NotebookAnalysisResult,
         )
         result = response.output_parsed
-    except (OpenAIError, ValidationError):
-        return OpenAIAnalysis(result=None, warnings=["openai_analysis_failed_using_local_fallback"])
+    except (OpenAIError, ValidationError) as exc:
+        error_kind = type(exc).__name__.lower()
+        return OpenAIAnalysis(
+            result=None,
+            warnings=[f"openai_analysis_failed_{error_kind}_using_local_fallback"],
+        )
 
     if result is None:
         return OpenAIAnalysis(result=None, warnings=["openai_empty_response_using_local_fallback"])
@@ -121,8 +131,8 @@ def replace_generic_region_labels(
 ) -> NotebookAnalysisResult:
     regions: list[NotebookRegion] = []
     for region in result.regions:
-        if region.label.strip().casefold() in GENERIC_REGION_LABELS and region.transcription:
-            label = " ".join(region.transcription.split())[:80]
+        if region.label.strip().casefold() in GENERIC_REGION_LABELS and region.highlight_text:
+            label = " ".join(region.highlight_text.split())
             regions.append(region.model_copy(update={"label": label}))
         else:
             regions.append(region)

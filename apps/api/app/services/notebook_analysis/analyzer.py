@@ -1,3 +1,5 @@
+import re
+
 from app.core.config import Settings, get_settings
 from app.schemas.notebook_analysis import (
     BoundingBox,
@@ -15,6 +17,10 @@ from app.services.image_processing.preprocess import (
 from app.services.notebook_analysis.arrows import detect_arrow_relationships
 from app.services.notebook_analysis.cleanup import clean_analysis_result
 from app.services.notebook_analysis.gemini import analyze_notebook_with_gemini
+from app.services.notebook_analysis.highlights import (
+    build_heuristic_highlights,
+    filter_interactive_regions,
+)
 from app.services.notebook_analysis.markers import detect_markers
 from app.services.notebook_analysis.ocr import analyze_regions_with_ocr
 from app.services.notebook_analysis.openai import analyze_notebook_with_openai
@@ -61,6 +67,7 @@ async def analyze_notebook_page(
                     openai_analysis.result,
                     processed_image,
                     warnings,
+                    ocr_regions,
                 )
     elif active_settings.gemini_analysis_enabled:
         if processed_image is None:
@@ -76,20 +83,26 @@ async def analyze_notebook_page(
                     gemini_analysis.result,
                     processed_image,
                     warnings,
+                    ocr_regions,
                 )
 
     if ocr_regions and analysis_image is not None:
-        detected_relationships = detect_arrow_relationships(
-            analysis_image,
-            ocr_regions,
-        )
+        typed_text = typed_text_from_regions(ocr_regions)
+        heuristic_regions = build_heuristic_highlights(ocr_regions, typed_text)
         return NotebookAnalysisResult(
             page_summary="OCR notebook analysis result",
-            typed_text=typed_text_from_regions(ocr_regions),
-            regions=ocr_regions,
-            relationships=detected_relationships,
+            typed_text=typed_text,
+            regions=heuristic_regions,
+            relationships=[],
             markers=detect_markers(analysis_image),
-            warnings=warnings,
+            warnings=[
+                *warnings,
+                *(
+                    ["heuristic_interactive_highlights_used"]
+                    if heuristic_regions
+                    else ["interactive_highlights_unavailable_showing_plain_ocr"]
+                ),
+            ],
             confidence=average_region_confidence(ocr_regions),
         )
 
@@ -110,29 +123,51 @@ async def analyze_notebook_page(
 
 
 def typed_text_from_regions(regions: list[NotebookRegion]) -> str:
-    return "\n".join(
-        region.transcription.strip() for region in regions if region.transcription.strip()
-    )
+    lines: list[str] = []
+    for region in regions:
+        line = " ".join(region.transcription.split())
+        if not line or line in {"•", "0"}:
+            continue
+
+        line = re.sub(r"\s+(?=\d+[.)]\s)", "\n", line)
+        lines.extend(part.strip() for part in line.splitlines() if part.strip())
+    return "\n".join(lines)
 
 
 def finalize_remote_result(
     result: NotebookAnalysisResult,
     processed_image: ProcessedNotebookImage,
     warnings: list[str],
+    ocr_regions: list[NotebookRegion],
 ) -> NotebookAnalysisResult:
-    relationships = result.relationships
+    typed_text = result.typed_text or typed_text_from_regions(result.regions)
+    verified_regions = filter_interactive_regions(result.regions, typed_text)
+    result_warnings = [*warnings, *result.warnings]
+    if not verified_regions:
+        verified_regions = build_heuristic_highlights(ocr_regions, typed_text)
+        result_warnings.append(
+            "heuristic_interactive_highlights_used"
+            if verified_regions
+            else "interactive_highlights_unavailable_showing_plain_ocr"
+        )
+
+    verified_result = result.model_copy(
+        update={
+            "typed_text": typed_text,
+            "regions": verified_regions,
+            "warnings": result_warnings,
+        }
+    )
+    relationships = verified_result.relationships
     if not relationships:
         analysis_image = get_analysis_image_array(processed_image)
-        relationships = detect_arrow_relationships(analysis_image, result.regions)
+        relationships = detect_arrow_relationships(analysis_image, verified_regions)
 
-    typed_text = result.typed_text or typed_text_from_regions(result.regions)
     return clean_analysis_result(
-        result.model_copy(
+        verified_result.model_copy(
             update={
-                "typed_text": typed_text,
                 "relationships": relationships,
-                "markers": result.markers,
-                "warnings": [*warnings, *result.warnings],
+                "markers": verified_result.markers,
             }
         )
     )
@@ -192,6 +227,7 @@ def build_mock_analysis_result(
             NotebookRegion(
                 id="region_1",
                 label="Mitochondria",
+                highlight_text="Mitochondria",
                 transcription="Mitochondria",
                 type="concept",
                 bbox=BoundingBox(x=0.18, y=0.3, width=0.24, height=0.08),
@@ -201,6 +237,7 @@ def build_mock_analysis_result(
             NotebookRegion(
                 id="region_2",
                 label="ATP",
+                highlight_text="ATP",
                 transcription="ATP",
                 type="concept",
                 bbox=BoundingBox(x=0.62, y=0.31, width=0.12, height=0.07),

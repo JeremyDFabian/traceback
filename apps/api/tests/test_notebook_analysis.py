@@ -219,8 +219,12 @@ def test_notebook_analysis_uses_ocr_when_enabled(monkeypatch) -> None:
     )
 
     assert result.page_summary == "OCR notebook analysis result"
-    assert result.regions[0].label == "OCR Text"
-    assert result.warnings == ["easyocr_analysis_used"]
+    assert [region.highlight_text for region in result.regions] == ["OCR Text"]
+    assert result.typed_text == "OCR Text"
+    assert result.warnings == [
+        "easyocr_analysis_used",
+        "heuristic_interactive_highlights_used",
+    ]
     assert result.confidence == 0.8
 
 
@@ -261,6 +265,31 @@ def test_text_blocks_to_regions_maps_ocr_text_to_regions() -> None:
     assert regions[0].label == "ATP"
     assert regions[0].transcription == "ATP"
     assert regions[0].confidence == 0.92
+
+
+def test_typed_text_from_regions_preserves_lines_and_numbered_items() -> None:
+    regions = [
+        NotebookRegion(
+            id="region_1",
+            label="ignored",
+            transcription="•",
+            type="other",
+            bbox=BoundingBox(x=0.1, y=0.1, width=0.2, height=0.1),
+            confidence=0.9,
+        ),
+        NotebookRegion(
+            id="region_2",
+            label="ignored",
+            transcription="Political power 1. Biological explanation",
+            type="other",
+            bbox=BoundingBox(x=0.1, y=0.2, width=0.2, height=0.1),
+            confidence=0.9,
+        ),
+    ]
+
+    assert analyzer.typed_text_from_regions(regions) == (
+        "Political power\n1. Biological explanation"
+    )
 
 
 def test_notebook_analysis_rejects_invalid_base64_image() -> None:

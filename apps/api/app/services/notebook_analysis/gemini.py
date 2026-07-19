@@ -12,7 +12,10 @@ Return only the schema-defined JSON result.
 
 Rules:
 - Transcribe only clearly visible handwritten or printed text.
-- Return at most 8 non-overlapping regions for the clearest concepts or headings.
+- Each region needs a concise label and a highlight_text phrase that appears verbatim
+  in typed_text. Highlight only unique key concepts of one to five words, never a
+  full sentence, OCR line, heading, or generic placeholder.
+- Return three to eight non-overlapping regions only when the concepts are clear.
 - Use stable ids: region_1, region_2, and relationship_1, relationship_2.
 - Use only these region types: concept, definition, question, example, or other.
 - Bounding boxes are normalized to 0.0 through 1.0 relative to the entire image.

@@ -27,12 +27,13 @@ def test_openai_analysis_uses_local_fallback_without_api_key() -> None:
     assert analysis.warnings == ["openai_api_key_missing_using_local_fallback"]
 
 
-def test_openai_replaces_generic_label_with_transcription() -> None:
+def test_openai_replaces_generic_label_with_highlight_text() -> None:
     result = NotebookAnalysisResult(
         regions=[
             NotebookRegion(
                 id="region_1",
                 label="Heading",
+                highlight_text="Louis Pasteur",
                 transcription="Louis Pasteur",
                 type="other",
                 bbox=BoundingBox(x=0.1, y=0.1, width=0.2, height=0.1),

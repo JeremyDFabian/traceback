@@ -22,6 +22,7 @@ class NotebookMarker(BaseModel):
 class NotebookRegion(BaseModel):
     id: str
     label: str
+    highlight_text: str = ""
     transcription: str
     type: Literal["concept", "definition", "question", "example", "other"]
     bbox: BoundingBox

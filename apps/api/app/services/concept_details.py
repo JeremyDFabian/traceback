@@ -92,7 +92,6 @@ def analyze_concept_with_openai(
             instructions=CONCEPT_DETAILS_PROMPT,
             input=f"Concept: {request.label}\nContext: {context}",
             text_format=GeneratedConceptDetails,
-            temperature=0,
         )
         details = response.output_parsed
     except (OpenAIError, ValidationError):

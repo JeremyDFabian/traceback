@@ -3,9 +3,12 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Marker = "star" | "question";
-type Region = {
+type HighlightColor = "yellow" | "blue" | "pink" | "red";
+export type Region = {
   id: string;
   label: string;
+  highlightText?: string;
+  highlightColor?: HighlightColor;
   type: "concept" | "definition" | "question";
   x: number;
   y: number;
@@ -22,6 +25,7 @@ type Region = {
 type ApiNotebookRegion = {
   id: string;
   label: string;
+  highlight_text: string;
   transcription: string;
   type: "concept" | "definition" | "question" | "example" | "other";
   bbox: { x: number; y: number; width: number; height: number };
@@ -35,17 +39,28 @@ type ApiNotebookAnalysis = {
   page_summary: string;
   typed_text: string;
   regions: ApiNotebookRegion[];
+  warnings: string[];
 };
 
 type PageAnalysis = {
   pageSummary: string;
   typedText: string;
   regions: Region[];
+  warnings: string[];
 };
 
 type ConceptDetails = {
   definition: string;
   sources: Array<{ title: string; url: string }>;
+};
+
+type NotebookFlashcard = {
+  id: string;
+  question: string;
+  answer: string;
+  difficulty: "easy" | "medium" | "hard";
+  source_phrase?: string;
+  included: boolean;
 };
 
 type SourceStatus = "idle" | "loading" | "ready" | "unavailable";
@@ -59,6 +74,8 @@ const seededRegions: Region[] = [
   {
     id: "mitochondria",
     label: "Mitochondria",
+    highlightText: "mitochondria",
+    highlightColor: "yellow",
     type: "concept",
     x: 12,
     y: 24,
@@ -85,6 +102,8 @@ const seededRegions: Region[] = [
   {
     id: "atp",
     label: "ATP",
+    highlightText: "ATP",
+    highlightColor: "blue",
     type: "concept",
     x: 56,
     y: 45,
@@ -109,6 +128,8 @@ const seededRegions: Region[] = [
   {
     id: "respiration",
     label: "Cellular respiration",
+    highlightText: "cellular respiration",
+    highlightColor: "pink",
     type: "definition",
     x: 23,
     y: 66,
@@ -299,6 +320,7 @@ function NotebookPreview({
           key={region.id}
           type="button"
           className={`region ${selected === region.id ? "is-selected" : ""}`}
+          data-highlight-color={region.highlightColor ?? "yellow"}
           style={{
             left: `${region.x}%`,
             top: `${region.y}%`,
@@ -331,7 +353,7 @@ function NotebookPreview({
   );
 }
 
-function InteractiveNotebookText({
+export function InteractiveNotebookText({
   text,
   regions,
   selectedId,
@@ -342,37 +364,59 @@ function InteractiveNotebookText({
   selectedId: string;
   onSelect: (id: string) => void;
 }) {
-  const interactiveRegions = regions.filter((region) => region.label.trim());
+  const interactiveRegions = regions.filter((region) =>
+    region.highlightText?.trim(),
+  );
   if (!interactiveRegions.length) return <p>{text}</p>;
 
-  const escapedLabels = interactiveRegions
-    .map((region) => region.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .sort((first, second) => second.length - first.length);
-  const segments = text.split(new RegExp(`(${escapedLabels.join("|")})`, "gi"));
+  const matches: Array<{ start: number; end: number; region: Region }> = [];
+  const seenPhrases = new Set<string>();
+  for (const region of [...interactiveRegions].sort(
+    (first, second) =>
+      (second.highlightText?.length ?? 0) - (first.highlightText?.length ?? 0),
+  )) {
+    const phrase = region.highlightText?.trim() ?? "";
+    const phraseKey = phrase.toLocaleLowerCase();
+    if (seenPhrases.has(phraseKey)) continue;
+
+    const pattern = phrase
+      .split(/\s+/)
+      .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("\\s+");
+    const match = new RegExp(`\\b${pattern}\\b`, "i").exec(text);
+    if (!match || match.index === undefined) continue;
+
+    const start = match.index;
+    const end = start + match[0].length;
+    if (
+      matches.some(
+        (candidate) => start < candidate.end && end > candidate.start,
+      )
+    ) {
+      continue;
+    }
+    matches.push({ start, end, region });
+    seenPhrases.add(phraseKey);
+  }
+  matches.sort((first, second) => first.start - second.start);
 
   return (
     <p>
-      {segments.map((segment, index) => {
-        const region = interactiveRegions.find(
-          (candidate) =>
-            candidate.label.trim().toLocaleLowerCase() ===
-            segment.trim().toLocaleLowerCase(),
-        );
-        if (!region) return <span key={`${segment}-${index}`}>{segment}</span>;
-
-        return (
+      {matches.map((match, index) => (
+        <span key={match.region.id}>
+          {text.slice(index ? matches[index - 1].end : 0, match.start)}
           <button
-            key={region.id}
             type="button"
-            className={`pdf-highlight ${selectedId === region.id ? "selected" : ""}`}
-            onPointerEnter={() => onSelect(region.id)}
-            onFocus={() => onSelect(region.id)}
-            onClick={() => onSelect(region.id)}
+            className={`pdf-highlight highlight-${match.region.highlightColor ?? "yellow"} ${selectedId === match.region.id ? "selected" : ""}`}
+            onPointerEnter={() => onSelect(match.region.id)}
+            onFocus={() => onSelect(match.region.id)}
+            onClick={() => onSelect(match.region.id)}
           >
-            {segment}
+            {text.slice(match.start, match.end)}
           </button>
-        );
-      })}
+        </span>
+      ))}
+      {text.slice(matches.at(-1)?.end ?? 0)}
     </p>
   );
 }
@@ -408,6 +452,8 @@ function normalizeRegion(region: ApiNotebookRegion): Region {
   return {
     id: region.id,
     label: region.label,
+    highlightText: region.highlight_text ?? "",
+    highlightColor: "yellow",
     type,
     x: region.bbox.x * 100,
     y: region.bbox.y * 100,
@@ -437,7 +483,19 @@ async function analyzeNotebook(file: File): Promise<PageAnalysis> {
     pageSummary: analysis.page_summary,
     typedText: analysis.typed_text,
     regions: analysis.regions.map(normalizeRegion),
+    warnings: analysis.warnings ?? [],
   };
+}
+
+function isValidHighlightPhrase(phrase: string | undefined, typedText: string) {
+  const normalizedPhrase = (phrase ?? "").trim().replace(/\s+/g, " ");
+  if (!normalizedPhrase || normalizedPhrase.split(" ").length > 5) return false;
+
+  const pattern = normalizedPhrase
+    .split(" ")
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+  return new RegExp(`\\b${pattern}\\b`, "i").test(typedText);
 }
 
 function WhatIsTraceback() {
@@ -628,11 +686,42 @@ export default function Page() {
   const [conceptDetails, setConceptDetails] = useState<ConceptDetails>();
   const [sourceStatus, setSourceStatus] = useState<SourceStatus>("idle");
   const [isRepositioning, setIsRepositioning] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [selectedNoteText, setSelectedNoteText] = useState("");
+  const [annotationHint, setAnnotationHint] = useState(
+    "Select a short phrase on the page to add a highlighter.",
+  );
+  const [selectionPosition, setSelectionPosition] = useState<{
+    x: number;
+    y: number;
+  }>();
+  const [editedDemoText, setEditedDemoText] = useState(demoTypedText);
+  const [flashcards, setFlashcards] = useState<NotebookFlashcard[]>([]);
+  const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
+  const [flashcardError, setFlashcardError] = useState<string>();
+  const [isFlashcardDrawerOpen, setIsFlashcardDrawerOpen] = useState(false);
   const selected = useMemo(
     () => regions.find((region) => region.id === selectedId) ?? regions[0],
     [regions, selectedId],
   );
   const activeAnalysis = pageAnalyses[activePageIndex];
+  const renderedTypedText = activeAnalysis
+    ? activeAnalysis.typedText
+    : editedDemoText;
+  const hasUnsafeHighlightFallback = Boolean(
+    activeAnalysis?.warnings.includes(
+      "interactive_highlights_unavailable_showing_plain_ocr",
+    ),
+  );
+  const selectedPhraseIsValid = selected
+    ? isValidHighlightPhrase(selected.highlightText, renderedTypedText)
+    : false;
+  const allHighlightsAreValid =
+    regions.length > 0 &&
+    regions.every((region) =>
+      isValidHighlightPhrase(region.highlightText, renderedTypedText),
+    );
   const visibleSources =
     conceptDetails?.sources ?? selected?.referenceLinks ?? [];
 
@@ -659,7 +748,7 @@ export default function Page() {
     return () => window.clearInterval(timer);
   }, [isLiveAnalysis, screen]);
   useEffect(() => {
-    if (screen !== "trace" || !selected?.explanation) {
+    if (screen !== "trace" || !selected) {
       setConceptDetails(undefined);
       setSourceStatus("idle");
       return;
@@ -743,13 +832,12 @@ export default function Page() {
       }
 
       const firstPage = analyses[0];
-      if (!firstPage?.regions.length) {
-        throw new Error("No readable study phrases were found in those pages.");
-      }
+      if (!firstPage)
+        throw new Error("Traceback could not read those notebook pages.");
       setPageAnalyses(analyses);
       setActivePageIndex(0);
       setRegions(firstPage.regions);
-      setSelectedId(firstPage.regions[0].id);
+      setSelectedId(firstPage.regions[0]?.id ?? "");
       setScreen("trace");
     } catch (error) {
       setAnalysisError(
@@ -764,10 +852,17 @@ export default function Page() {
   }
   function showPage(index: number) {
     const nextPage = pageAnalyses[index];
-    if (!nextPage?.regions.length) return;
+    if (!nextPage) return;
     setActivePageIndex(index);
     setRegions(nextPage.regions);
-    setSelectedId(nextPage.regions[0].id);
+    setSelectedId(nextPage.regions[0]?.id ?? "");
+    setIsEditingNotes(false);
+    setIsAnnotating(false);
+    setSelectedNoteText("");
+    setSelectionPosition(undefined);
+    setAnnotationHint(
+      "Select a short phrase on the page to add a highlighter.",
+    );
   }
   function navigateTo(sectionId: "what-it-is" | "how-it-works") {
     setScreen("setup");
@@ -785,7 +880,9 @@ export default function Page() {
       ...current,
       {
         id,
-        label: "New concept",
+        label: "",
+        highlightText: "",
+        highlightColor: "yellow",
         type: "concept",
         x: 35,
         y: 38,
@@ -796,6 +893,128 @@ export default function Page() {
     ]);
     setSelectedId(id);
     setIsRepositioning(false);
+  }
+  function updateNoteText(nextText: string) {
+    if (!activeAnalysis) {
+      setEditedDemoText(nextText);
+      return;
+    }
+    setPageAnalyses((current) =>
+      current.map((analysis, index) =>
+        index === activePageIndex
+          ? { ...analysis, typedText: nextText }
+          : analysis,
+      ),
+    );
+  }
+  function captureNoteSelection() {
+    const selection = window.getSelection();
+    const phrase = selection?.toString().replace(/\s+/g, " ").trim() ?? "";
+    if (!phrase || !selection?.rangeCount) {
+      setSelectedNoteText("");
+      setSelectionPosition(undefined);
+      return;
+    }
+
+    if (!isValidHighlightPhrase(phrase, renderedTypedText)) {
+      setSelectedNoteText("");
+      setSelectionPosition(undefined);
+      setAnnotationHint("Choose 1–5 words that appear in the extracted notes.");
+      return;
+    }
+
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    setSelectedNoteText(phrase);
+    setAnnotationHint("Choose a color to save this highlight.");
+    setSelectionPosition({
+      x: Math.min(
+        window.innerWidth - 150,
+        Math.max(12, rect.left + rect.width / 2),
+      ),
+      y: Math.max(12, rect.top - 12),
+    });
+  }
+  function addManualHighlight(color: HighlightColor) {
+    const phrase = selectedNoteText;
+    if (!isValidHighlightPhrase(phrase, renderedTypedText)) return;
+
+    const existing = regions.find(
+      (region) =>
+        region.highlightText?.trim().toLocaleLowerCase() ===
+        phrase.toLocaleLowerCase(),
+    );
+    if (existing) {
+      setRegions((current) =>
+        current.map((region) =>
+          region.id === existing.id
+            ? { ...region, highlightColor: color }
+            : region,
+        ),
+      );
+      setSelectedId(existing.id);
+    } else {
+      const id = `manual-${Date.now()}`;
+      setRegions((current) => [
+        ...current,
+        {
+          id,
+          label: phrase,
+          highlightText: phrase,
+          highlightColor: color,
+          type: "concept",
+          x: 0,
+          y: 0,
+          width: 0.01,
+          height: 0.01,
+          confidence: 100,
+          transcription: renderedTypedText,
+          trustedSourceQueries: [phrase],
+        },
+      ]);
+      setSelectedId(id);
+    }
+    setSelectedNoteText("");
+    setSelectionPosition(undefined);
+    setAnnotationHint("Select another short phrase to add a highlighter.");
+    window.getSelection()?.removeAllRanges();
+  }
+  async function generateFlashcards() {
+    setFlashcardError(undefined);
+    setIsGeneratingFlashcards(true);
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/notebook-flashcards/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            typed_text: renderedTypedText,
+            highlights: regions.flatMap((region) => {
+              const phrase = region.highlightText?.trim();
+              return phrase ? [{ id: region.id, phrase }] : [];
+            }),
+            count: 5,
+          }),
+        },
+      );
+      if (!response.ok)
+        throw new Error("Traceback could not generate flashcards.");
+      const payload = (await response.json()) as {
+        flashcards: Omit<NotebookFlashcard, "included">[];
+      };
+      setFlashcards(
+        payload.flashcards.map((card) => ({ ...card, included: true })),
+      );
+      setIsFlashcardDrawerOpen(true);
+    } catch (error) {
+      setFlashcardError(
+        error instanceof Error
+          ? error.message
+          : "Traceback could not generate flashcards.",
+      );
+    } finally {
+      setIsGeneratingFlashcards(false);
+    }
   }
   return (
     <main className="app-shell">
@@ -826,19 +1045,16 @@ export default function Page() {
           >
             How it works
           </a>
-        </div>
-        <div className="topbar-actions">
           <a
-            className="github-link"
+            className="nav-github-link"
             href="https://github.com/JeremyDFabian/traceback"
             target="_blank"
             rel="noreferrer"
           >
-            GitHub <span>↗</span>
+            GitHub
           </a>
-          <span className="session-status">
-            <i /> Demo ready
-          </span>
+        </div>
+        <div className="topbar-actions">
           <button className="demo-button" onClick={beginAnalysis}>
             Run demo <span>↗</span>
           </button>
@@ -942,12 +1158,13 @@ export default function Page() {
               <p className="eyebrow">Step 2 of 3 · Review highlights</p>
               <h1>Review and refine your highlights.</h1>
               <p>
-                Pick a phrase, correct the label if needed, then save your
-                interactive PDF.
+                Review the exact phrases readers can hover in your interactive
+                PDF. Every phrase must appear in the extracted text.
               </p>
             </div>
             <button
               className="primary-button"
+              disabled={!allHighlightsAreValid}
               onClick={() => setScreen("trace")}
             >
               Save &amp; open PDF <span>→</span>
@@ -994,139 +1211,201 @@ export default function Page() {
               />
             </div>
             <aside className="inspector">
-              <p className="eyebrow">1. Choose a highlight</p>
-              <div className="highlight-picker" role="list">
-                {regions.map((region, index) => (
+              {selected ? (
+                <>
+                  <p className="eyebrow">1. Choose a highlight</p>
+                  <div className="highlight-picker" role="list">
+                    {regions.map((region, index) => (
+                      <button
+                        key={region.id}
+                        type="button"
+                        role="listitem"
+                        className={region.id === selected.id ? "active" : ""}
+                        onClick={() => {
+                          setSelectedId(region.id);
+                          setIsRepositioning(false);
+                        }}
+                      >
+                        <span>{index + 1}</span>
+                        {region.highlightText || "Untitled highlight"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="inspector-divider" />
+                  <p className="eyebrow">2. Edit the selected phrase</p>
+                  <label>
+                    Highlighted phrase
+                    <input
+                      value={selected.highlightText}
+                      onChange={(event) =>
+                        setRegions((current) =>
+                          current.map((region) =>
+                            region.id === selected.id
+                              ? {
+                                  ...region,
+                                  label: event.target.value,
+                                  highlightText: event.target.value,
+                                }
+                              : region,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <div className="editor-context">
+                    <small>ORIGINAL OCR CONTEXT</small>
+                    <p>
+                      {selected.transcription || "No OCR context available."}
+                    </p>
+                  </div>
+                  {!selectedPhraseIsValid ? (
+                    <p className="field-error">
+                      Use a phrase of up to five words that appears in the
+                      extracted text.
+                    </p>
+                  ) : null}
+                  <label>
+                    Highlight type
+                    <select
+                      value={selected.type}
+                      onChange={(event) =>
+                        setRegions((current) =>
+                          current.map((region) =>
+                            region.id === selected.id
+                              ? {
+                                  ...region,
+                                  type: event.target.value as Region["type"],
+                                }
+                              : region,
+                          ),
+                        )
+                      }
+                    >
+                      <option value="concept">Topic</option>
+                      <option value="definition">Definition</option>
+                      <option value="question">Question</option>
+                    </select>
+                  </label>
+                  <div className="highlighter-colors">
+                    <span>Highlighter color</span>
+                    <div>
+                      {(
+                        ["yellow", "red", "pink", "blue"] as HighlightColor[]
+                      ).map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          className={`highlighter-color ${color} ${selected.highlightColor === color ? "active" : ""}`}
+                          aria-label={`${color} highlighter`}
+                          aria-pressed={selected.highlightColor === color}
+                          onClick={() =>
+                            setRegions((current) =>
+                              current.map((region) =>
+                                region.id === selected.id
+                                  ? { ...region, highlightColor: color }
+                                  : region,
+                              ),
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="marker-row">
+                    <span>Optional study marker</span>
+                    <button
+                      className={
+                        selected.marker === "star" ? "marker active" : "marker"
+                      }
+                      onClick={() =>
+                        setRegions((current) =>
+                          current.map((region) =>
+                            region.id === selected.id
+                              ? {
+                                  ...region,
+                                  marker:
+                                    region.marker === "star"
+                                      ? undefined
+                                      : "star",
+                                }
+                              : region,
+                          ),
+                        )
+                      }
+                    >
+                      ★ Mark important
+                    </button>
+                    <button
+                      className={
+                        selected.marker === "question"
+                          ? "marker active"
+                          : "marker"
+                      }
+                      onClick={() =>
+                        setRegions((current) =>
+                          current.map((region) =>
+                            region.id === selected.id
+                              ? {
+                                  ...region,
+                                  marker:
+                                    region.marker === "question"
+                                      ? undefined
+                                      : "question",
+                                }
+                              : region,
+                          ),
+                        )
+                      }
+                    >
+                      ? Review later
+                    </button>
+                  </div>
+                  <p className="editor-help">
+                    Need a different position? Select <b>Move selected</b>, then
+                    drag the outline on the notebook.
+                  </p>
+                  <div
+                    className="confidence"
+                    aria-label="AI text detection confidence"
+                  >
+                    <span>AI confidence</span>
+                    <strong>{selected.confidence}%</strong>
+                    <div>
+                      <i style={{ width: `${selected.confidence}%` }} />
+                    </div>
+                  </div>
                   <button
-                    key={region.id}
-                    type="button"
-                    role="listitem"
-                    className={region.id === selected.id ? "active" : ""}
+                    className="text-button danger"
+                    disabled={regions.length === 1}
                     onClick={() => {
-                      setSelectedId(region.id);
-                      setIsRepositioning(false);
+                      setRegions((current) =>
+                        current.filter((region) => region.id !== selected.id),
+                      );
+                      setSelectedId(
+                        regions.find((region) => region.id !== selected.id)
+                          ?.id ?? "",
+                      );
                     }}
                   >
-                    <span>{index + 1}</span>
-                    {region.label || "Untitled highlight"}
+                    {regions.length === 1
+                      ? "Keep at least one highlight"
+                      : "Remove highlight"}
                   </button>
-                ))}
-              </div>
-              <div className="inspector-divider" />
-              <p className="eyebrow">2. Edit the selected phrase</p>
-              <label>
-                Typed text
-                <input
-                  value={selected.label}
-                  onChange={(event) =>
-                    setRegions((current) =>
-                      current.map((region) =>
-                        region.id === selected.id
-                          ? { ...region, label: event.target.value }
-                          : region,
-                      ),
-                    )
-                  }
-                />
-              </label>
-              <label>
-                Highlight type
-                <select
-                  value={selected.type}
-                  onChange={(event) =>
-                    setRegions((current) =>
-                      current.map((region) =>
-                        region.id === selected.id
-                          ? {
-                              ...region,
-                              type: event.target.value as Region["type"],
-                            }
-                          : region,
-                      ),
-                    )
-                  }
-                >
-                  <option value="concept">Topic</option>
-                  <option value="definition">Definition</option>
-                  <option value="question">Question</option>
-                </select>
-              </label>
-              <div className="marker-row">
-                <span>Optional study marker</span>
-                <button
-                  className={
-                    selected.marker === "star" ? "marker active" : "marker"
-                  }
-                  onClick={() =>
-                    setRegions((current) =>
-                      current.map((region) =>
-                        region.id === selected.id
-                          ? {
-                              ...region,
-                              marker:
-                                region.marker === "star" ? undefined : "star",
-                            }
-                          : region,
-                      ),
-                    )
-                  }
-                >
-                  ★ Mark important
-                </button>
-                <button
-                  className={
-                    selected.marker === "question" ? "marker active" : "marker"
-                  }
-                  onClick={() =>
-                    setRegions((current) =>
-                      current.map((region) =>
-                        region.id === selected.id
-                          ? {
-                              ...region,
-                              marker:
-                                region.marker === "question"
-                                  ? undefined
-                                  : "question",
-                            }
-                          : region,
-                      ),
-                    )
-                  }
-                >
-                  ? Review later
-                </button>
-              </div>
-              <p className="editor-help">
-                Need a different position? Select <b>Move selected</b>, then
-                drag the outline on the notebook.
-              </p>
-              <div
-                className="confidence"
-                aria-label="AI text detection confidence"
-              >
-                <span>AI confidence</span>
-                <strong>{selected.confidence}%</strong>
-                <div>
-                  <i style={{ width: `${selected.confidence}%` }} />
+                </>
+              ) : (
+                <div className="empty-highlight-editor">
+                  <p className="eyebrow">No verified highlights</p>
+                  <h2>Your typed PDF is still ready.</h2>
+                  <p>
+                    Terra did not return any safe key phrases for this page. You
+                    can retry analysis or add a phrase that appears in the
+                    extracted text.
+                  </p>
+                  <button className="secondary-button" onClick={addRegion}>
+                    Add a phrase
+                  </button>
                 </div>
-              </div>
-              <button
-                className="text-button danger"
-                disabled={regions.length === 1}
-                onClick={() => {
-                  setRegions((current) =>
-                    current.filter((region) => region.id !== selected.id),
-                  );
-                  setSelectedId(
-                    regions.find((region) => region.id !== selected.id)?.id ??
-                      "",
-                  );
-                }}
-              >
-                {regions.length === 1
-                  ? "Keep at least one highlight"
-                  : "Remove highlight"}
-              </button>
+              )}
             </aside>
           </div>
         </section>
@@ -1147,12 +1426,51 @@ export default function Page() {
                 useful links about that topic.
               </p>
             </div>
-            <button
-              className="secondary-button"
-              onClick={() => setScreen("editor")}
-            >
-              Edit highlights
-            </button>
+            <div className="trace-actions">
+              <button
+                className={
+                  isAnnotating ? "secondary-button active" : "secondary-button"
+                }
+                onClick={() => {
+                  setIsAnnotating((current) => !current);
+                  setIsEditingNotes(false);
+                  setSelectedNoteText("");
+                  setSelectionPosition(undefined);
+                  setAnnotationHint(
+                    "Select a short phrase on the page to add a highlighter.",
+                  );
+                }}
+              >
+                {isAnnotating ? "Done annotating" : "Annotate"}
+              </button>
+              <button
+                className={
+                  isEditingNotes
+                    ? "secondary-button active"
+                    : "secondary-button"
+                }
+                onClick={() => {
+                  setIsEditingNotes((current) => !current);
+                  setIsAnnotating(false);
+                  setSelectedNoteText("");
+                  setSelectionPosition(undefined);
+                  setAnnotationHint(
+                    "Select a short phrase on the page to add a highlighter.",
+                  );
+                }}
+              >
+                {isEditingNotes ? "Done editing" : "Edit text"}
+              </button>
+              <button
+                className="primary-button flashcard-button"
+                disabled={isGeneratingFlashcards || !renderedTypedText.trim()}
+                onClick={generateFlashcards}
+              >
+                {isGeneratingFlashcards
+                  ? "Creating cards…"
+                  : "Generate flashcards"}
+              </button>
+            </div>
           </header>
           <div className="interactive-pdf-layout">
             <section
@@ -1169,16 +1487,62 @@ export default function Page() {
               <div className="pdf-page-content">
                 <p className="pdf-kicker">EXTRACTED FROM YOUR NOTEBOOK</p>
                 <h2>{activeAnalysis?.pageSummary ?? "Cellular respiration"}</h2>
-                <InteractiveNotebookText
-                  text={activeAnalysis?.typedText || demoTypedText}
-                  regions={regions}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
-                <p>
-                  Hover over any highlighted topic to open a short explanation
-                  and trusted places to learn more.
-                </p>
+                {isEditingNotes ? (
+                  <>
+                    <p className="edit-note-helper">
+                      Edit the extracted note text, then choose Done editing to
+                      return to reading.
+                    </p>
+                    <div
+                      key={`note-editor-${activePageIndex}`}
+                      className="editable-note-text"
+                      contentEditable
+                      suppressContentEditableWarning
+                      role="textbox"
+                      aria-multiline="true"
+                      onInput={(event) =>
+                        updateNoteText(event.currentTarget.innerText)
+                      }
+                      onMouseUp={captureNoteSelection}
+                      onKeyUp={captureNoteSelection}
+                    >
+                      {renderedTypedText}
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className={
+                      isAnnotating
+                        ? "annotatable-note-text active"
+                        : "annotatable-note-text"
+                    }
+                    onMouseUp={isAnnotating ? captureNoteSelection : undefined}
+                    onKeyUp={isAnnotating ? captureNoteSelection : undefined}
+                  >
+                    {isAnnotating ? (
+                      <p className="annotation-instruction">{annotationHint}</p>
+                    ) : null}
+                    <InteractiveNotebookText
+                      text={renderedTypedText}
+                      regions={regions}
+                      selectedId={selectedId}
+                      onSelect={setSelectedId}
+                    />
+                  </div>
+                )}
+                {!regions.length ? (
+                  <div className="no-highlight-notice" role="status">
+                    <strong>Showing clean extracted text</strong>
+                    <span>
+                      {hasUnsafeHighlightFallback
+                        ? "We could not verify safe highlights for this page."
+                        : "No interactive phrases were found for this page."}
+                    </span>
+                    <button type="button" onClick={beginAnalysis}>
+                      Retry analysis
+                    </button>
+                  </div>
+                ) : null}
               </div>
               <footer>
                 <span>Highlights added by Traceback</span>
@@ -1206,59 +1570,204 @@ export default function Page() {
                 </button>
               </div>
             ) : null}
-            <aside key={selected.id} className="concept-detail">
-              <p className="eyebrow">About this highlight</p>
-              <div className="concept-title">
-                <span>
-                  {selected.marker === "star"
-                    ? "★"
-                    : selected.marker === "question"
-                      ? "?"
-                      : "⌁"}
-                </span>
-                <h2>{selected.label}</h2>
-              </div>
-              <div className="transcription">
-                <small>EXTRACTED TEXT</small>
-                <p>{selected.transcription ?? selected.label}</p>
-              </div>
-              <div className="study-note">
-                <p className="detail-label">Quick explanation</p>
-                <p>
-                  {conceptDetails?.definition ??
-                    selected.explanation ??
-                    `${selected.label} is a key idea in this notebook page.`}
-                </p>
-              </div>
-              <div className="reference-list">
-                <div className="reference-heading">
-                  <p className="detail-label">Useful links</p>
-                  {sourceStatus === "loading" ? <span>Updating…</span> : null}
+            {selected ? (
+              <aside key={selected.id} className="concept-detail">
+                <p className="eyebrow">About this highlight</p>
+                <div className="concept-title">
+                  <span>
+                    {selected.marker === "star"
+                      ? "★"
+                      : selected.marker === "question"
+                        ? "?"
+                        : "⌁"}
+                  </span>
+                  <h2>{selected.label}</h2>
                 </div>
-                {visibleSources.map((source) => (
-                  <a
-                    key={source.url}
-                    href={source.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <span>↗</span> {source.title}
-                  </a>
-                ))}
-                {!visibleSources.length && sourceStatus === "loading" ? (
-                  <p className="reference-loading">Finding approved sources…</p>
-                ) : null}
-                {!visibleSources.length && sourceStatus === "unavailable" ? (
-                  <p className="reference-loading">
-                    Links are temporarily unavailable. Try another highlight or
-                    keep studying from the extracted text.
+                <div className="study-note">
+                  <p className="detail-label">Quick explanation</p>
+                  <p>
+                    {conceptDetails?.definition ??
+                      selected.explanation ??
+                      `${selected.label} is a key idea in this notebook page.`}
                   </p>
-                ) : null}
-              </div>
-            </aside>
+                </div>
+                <div className="reference-list">
+                  <div className="reference-heading">
+                    <p className="detail-label">Useful links</p>
+                    {sourceStatus === "loading" ? <span>Updating…</span> : null}
+                  </div>
+                  {visibleSources.map((source) => (
+                    <a
+                      key={source.url}
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span>↗</span> {source.title}
+                    </a>
+                  ))}
+                  {!visibleSources.length && sourceStatus === "loading" ? (
+                    <p className="reference-loading">
+                      Finding approved sources…
+                    </p>
+                  ) : null}
+                  {!visibleSources.length && sourceStatus === "unavailable" ? (
+                    <p className="reference-loading">
+                      Links are temporarily unavailable. Try another highlight
+                      or keep studying from the extracted text.
+                    </p>
+                  ) : null}
+                </div>
+              </aside>
+            ) : (
+              <aside className="concept-detail empty-concept-detail">
+                <p className="eyebrow">Interactive highlights</p>
+                <h2>Nothing misleading is highlighted.</h2>
+                <p>
+                  Traceback kept this page readable because it could not verify
+                  a short phrase to attach context and trusted sources to.
+                </p>
+                <button className="secondary-button" onClick={beginAnalysis}>
+                  Retry analysis
+                </button>
+              </aside>
+            )}
           </div>
+          {isAnnotating && selectedNoteText && selectionPosition ? (
+            <div
+              className="selection-popover"
+              style={{ left: selectionPosition.x, top: selectionPosition.y }}
+              role="dialog"
+              aria-label={`Highlight ${selectedNoteText}`}
+            >
+              <span>{selectedNoteText}</span>
+              <div>
+                {(["yellow", "red", "pink", "blue"] as HighlightColor[]).map(
+                  (color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`highlighter-color ${color}`}
+                      aria-label={`Highlight selection ${color}`}
+                      disabled={
+                        !isValidHighlightPhrase(
+                          selectedNoteText,
+                          renderedTypedText,
+                        )
+                      }
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => addManualHighlight(color)}
+                    />
+                  ),
+                )}
+              </div>
+            </div>
+          ) : null}
+          {flashcardError ? (
+            <p className="flashcard-error">{flashcardError}</p>
+          ) : null}
         </section>
       )}
+
+      {isFlashcardDrawerOpen ? (
+        <div
+          className="flashcard-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Review flashcards"
+        >
+          <div className="flashcard-drawer">
+            <header>
+              <div>
+                <p className="eyebrow">Study cards from your notes</p>
+                <h2>Review flashcards</h2>
+              </div>
+              <button
+                className="text-button"
+                onClick={() => setIsFlashcardDrawerOpen(false)}
+              >
+                Close
+              </button>
+            </header>
+            <p className="flashcard-drawer-copy">
+              Edit a card, remove any you do not want, then save the set for
+              this session.
+            </p>
+            <div className="notebook-flashcards">
+              {flashcards.map((card) => (
+                <article
+                  key={card.id}
+                  className={card.included ? "" : "excluded"}
+                >
+                  <label>
+                    Question
+                    <textarea
+                      value={card.question}
+                      onChange={(event) =>
+                        setFlashcards((current) =>
+                          current.map((item) =>
+                            item.id === card.id
+                              ? { ...item, question: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Answer
+                    <textarea
+                      value={card.answer}
+                      onChange={(event) =>
+                        setFlashcards((current) =>
+                          current.map((item) =>
+                            item.id === card.id
+                              ? { ...item, answer: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <footer>
+                    <span>
+                      {card.source_phrase
+                        ? `From “${card.source_phrase}”`
+                        : "From your notes"}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() =>
+                        setFlashcards((current) =>
+                          current.map((item) =>
+                            item.id === card.id
+                              ? { ...item, included: !item.included }
+                              : item,
+                          ),
+                        )
+                      }
+                    >
+                      {card.included ? "Remove" : "Include"}
+                    </button>
+                  </footer>
+                </article>
+              ))}
+            </div>
+            <footer className="flashcard-drawer-footer">
+              <span>
+                {flashcards.filter((card) => card.included).length} cards ready
+              </span>
+              <button
+                className="primary-button"
+                onClick={() => setIsFlashcardDrawerOpen(false)}
+              >
+                Save cards
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
 
       {screen === "cards" && (
         <section className="cards-view">

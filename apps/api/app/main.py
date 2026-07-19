@@ -10,6 +10,7 @@ from app.api.jobs import router as jobs_router
 from app.api.learning import router as learning_router
 from app.api.matches import router as matches_router
 from app.api.notebook_analysis import router as notebook_analysis_router
+from app.api.notebook_flashcards import router as notebook_flashcards_router
 from app.api.sessions import router as sessions_router
 from app.api.uploads import router as uploads_router
 from app.config import get_settings
@@ -36,3 +37,4 @@ app.include_router(analysis_router, prefix="/api")
 app.include_router(uploads_router, prefix="/api")
 app.include_router(flashcards_router, prefix="/api")
 app.include_router(notebook_analysis_router, prefix="/api")
+app.include_router(notebook_flashcards_router, prefix="/api")
