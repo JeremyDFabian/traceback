@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.api.analysis import router as analysis_router
 from app.api.decks import router as decks_router
+from app.api.flashcards import router as flashcards_router
 from app.api.health import router as health_router
 from app.api.jobs import router as jobs_router
 from app.api.learning import router as learning_router
@@ -22,3 +23,4 @@ app.include_router(sessions_router, prefix="/api")
 app.include_router(decks_router, prefix="/api")
 app.include_router(analysis_router, prefix="/api")
 app.include_router(uploads_router, prefix="/api")
+app.include_router(flashcards_router, prefix="/api")

@@ -23,6 +23,31 @@ The web application runs at `http://localhost:3000`. The API runs at
 `http://localhost:8000/docs` and a health endpoint at
 `http://localhost:8000/api/health`.
 
+## Test flashcard generation without a UI
+
+Flashcard generation is exposed through FastAPI and calls OpenAI only from the
+server. Set `OPENAI_API_KEY` and `OPENAI_TEXT_MODEL` in `.env`, start the
+project, and open `http://localhost:8000/docs`.
+
+Use `POST /api/flashcards/generate` with an already-matched note region and
+lecture slide:
+
+```json
+{
+  "source": {
+    "session_id": "00000000-0000-4000-8000-000000000001",
+    "region_id": "region-7",
+    "slide_number": 7,
+    "note_text": "Mitochondria produce ATP through cellular respiration.",
+    "slide_text": "The mitochondrion is the main site of aerobic ATP production."
+  },
+  "count": 5
+}
+```
+
+Automated tests replace the OpenAI generator with fakes, so `make test` does
+not require an API key and does not spend API credits.
+
 ## Repository layout
 
 ```text

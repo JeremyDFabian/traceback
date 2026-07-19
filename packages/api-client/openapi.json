@@ -125,6 +125,105 @@
         "title": "ExtractedSlide",
         "type": "object"
       },
+      "Flashcard": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Answer",
+            "type": "string"
+          },
+          "difficulty": {
+            "enum": ["easy", "medium", "hard"],
+            "title": "Difficulty",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FlashcardSourceReference"
+          }
+        },
+        "required": ["id", "question", "answer", "difficulty", "source"],
+        "title": "Flashcard",
+        "type": "object"
+      },
+      "FlashcardSourceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "note_text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Note Text",
+            "type": "string"
+          },
+          "region_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Region Id",
+            "type": "string"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "slide_number": {
+            "minimum": 1.0,
+            "title": "Slide Number",
+            "type": "integer"
+          },
+          "slide_text": {
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Slide Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "region_id",
+          "slide_number",
+          "note_text",
+          "slide_text"
+        ],
+        "title": "FlashcardSourceInput",
+        "type": "object"
+      },
+      "FlashcardSourceReference": {
+        "additionalProperties": false,
+        "properties": {
+          "region_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Region Id",
+            "type": "string"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "slide_number": {
+            "minimum": 1.0,
+            "title": "Slide Number",
+            "type": "integer"
+          }
+        },
+        "required": ["session_id", "region_id", "slide_number"],
+        "title": "FlashcardSourceReference",
+        "type": "object"
+      },
       "FlashcardSuggestion": {
         "properties": {
           "answer": {
@@ -169,6 +268,41 @@
           "status"
         ],
         "title": "FlashcardSuggestion",
+        "type": "object"
+      },
+      "GenerateFlashcardsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "default": 5,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FlashcardSourceInput"
+          }
+        },
+        "required": ["source"],
+        "title": "GenerateFlashcardsRequest",
+        "type": "object"
+      },
+      "GenerateFlashcardsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "flashcards": {
+            "items": {
+              "$ref": "#/components/schemas/Flashcard"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Flashcards",
+            "type": "array"
+          }
+        },
+        "required": ["flashcards"],
+        "title": "GenerateFlashcardsResponse",
         "type": "object"
       },
       "GraphEdge": {
@@ -655,6 +789,45 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/flashcards/generate": {
+      "post": {
+        "operationId": "generate_flashcards_api_flashcards_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateFlashcardsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateFlashcardsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Flashcards",
+        "tags": ["flashcards"]
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "health_api_health_get",

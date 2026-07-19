@@ -5,6 +5,7 @@ description = "Traceback FastAPI service"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<1",
+    "openai>=2,<3",
     "PyMuPDF>=1.24,<2",
     "psycopg[binary]>=3.2,<4",
     "python-multipart>=0.0.20,<1",

@@ -9,6 +9,7 @@ PYTHONPATH=. uv run python ../../scripts/export_openapi.py
 cd "$repo_root"
 corepack pnpm --filter @traceback/api-client exec openapi-typescript \
   openapi.json \
+  --default-non-nullable=false \
   --output src/schema.d.ts
 corepack pnpm --filter @traceback/api-client exec prettier \
   --write \
