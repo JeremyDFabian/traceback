@@ -1,11 +1,16 @@
+from collections.abc import Iterator
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
+from fastapi.testclient import TestClient
 from openai import APITimeoutError, OpenAIError
 from pydantic import ValidationError
 
+from app.api.flashcards import get_flashcard_generator
+from app.config import Settings, get_settings
+from app.main import app
 from app.schemas.flashcards import (
     Flashcard,
     FlashcardSourceInput,
@@ -15,6 +20,34 @@ from app.schemas.flashcards import (
     GenerateFlashcardsResponse,
 )
 from app.services.flashcards import FlashcardGenerationError, OpenAIFlashcardGenerator
+
+
+class FakeFlashcardGenerator:
+    def __init__(
+        self,
+        flashcards: list[GeneratedFlashcard] | None = None,
+        error: FlashcardGenerationError | None = None,
+    ) -> None:
+        self.flashcards = flashcards or []
+        self.error = error
+        self.call_count = 0
+        self.received_source: FlashcardSourceInput | None = None
+        self.received_count: int | None = None
+
+    def generate(self, source: FlashcardSourceInput, count: int) -> list[GeneratedFlashcard]:
+        self.call_count += 1
+        self.received_source = source
+        self.received_count = count
+        if self.error is not None:
+            raise self.error
+        return self.flashcards
+
+
+@pytest.fixture
+def api_client() -> Iterator[TestClient]:
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()
 
 
 def source_payload() -> dict[str, object]:
@@ -38,6 +71,66 @@ def generated_batch(*questions: str) -> GeneratedFlashcardBatch:
             for question in questions
         ]
     )
+
+
+def valid_request_body(count: int = 1) -> dict[str, object]:
+    return {"source": source_payload(), "count": count}
+
+
+def test_generate_endpoint_returns_traceable_flashcards(api_client: TestClient) -> None:
+    generator = FakeFlashcardGenerator(flashcards=generated_batch("Question").flashcards)
+    app.dependency_overrides[get_flashcard_generator] = lambda: generator
+
+    response = api_client.post("/api/flashcards/generate", json=valid_request_body())
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["flashcards"]) == 1
+    card = payload["flashcards"][0]
+    UUID(card["id"])
+    assert card["question"] == "Question"
+    assert card["difficulty"] == "easy"
+    assert card["source"] == {
+        "session_id": source_payload()["session_id"],
+        "region_id": source_payload()["region_id"],
+        "slide_number": source_payload()["slide_number"],
+    }
+    assert generator.received_count == 1
+    assert generator.received_source == FlashcardSourceInput(**source_payload())
+
+
+def test_invalid_request_never_calls_generator(api_client: TestClient) -> None:
+    generator = FakeFlashcardGenerator()
+    app.dependency_overrides[get_flashcard_generator] = lambda: generator
+
+    response = api_client.post("/api/flashcards/generate", json=valid_request_body(count=0))
+
+    assert response.status_code == 422
+    assert generator.call_count == 0
+
+
+def test_generation_failure_returns_safe_bad_gateway(api_client: TestClient) -> None:
+    app.dependency_overrides[get_flashcard_generator] = lambda: FakeFlashcardGenerator(
+        error=FlashcardGenerationError("private provider detail")
+    )
+
+    response = api_client.post("/api/flashcards/generate", json=valid_request_body())
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Flashcard generation failed"}
+    assert "private provider detail" not in response.text
+
+
+def test_missing_configuration_returns_service_unavailable(api_client: TestClient) -> None:
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        openai_api_key=None,
+        openai_text_model=None,
+    )
+
+    response = api_client.post("/api/flashcards/generate", json=valid_request_body())
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Flashcard generation is not configured"}
 
 
 def test_generator_parses_one_flashcard_from_the_source() -> None:
