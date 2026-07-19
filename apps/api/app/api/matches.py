@@ -8,6 +8,7 @@ from app.api.analysis import analysis_storage_key
 from app.core.config import get_settings
 from app.db import get_connection
 from app.pdf import extract_pdf
+from app.persistence import persist_match
 from app.retrieval import match_region
 from app.schemas.analysis import AnalysisResult
 from app.schemas.match import MatchResponse
@@ -49,8 +50,10 @@ def match_session_region(
     if not pdf_path.is_file():
         raise HTTPException(status_code=404, detail="Lecture PDF file not found")
 
-    return match_region(
+    match = match_region(
         region_id=region.id,
         query=f"{region.label} {region.transcription}",
         slides=extract_pdf(pdf_path),
     )
+    persist_match(connection, session_id, match)
+    return match

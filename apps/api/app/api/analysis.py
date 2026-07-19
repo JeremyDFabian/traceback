@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import get_settings
 from app.db import get_connection
+from app.persistence import persist_analysis
 from app.schemas.analysis import AnalysisResult
 from app.storage import load_json, save_json
 
@@ -39,6 +40,7 @@ def save_analysis(
     connection: psycopg.Connection[Any] = Depends(get_connection),
 ) -> AnalysisResult:
     _require_session(connection, session_id)
+    persist_analysis(connection, session_id, analysis)
     save_json(get_settings().storage_dir, analysis_storage_key(session_id), analysis)
     return analysis
 
@@ -64,6 +66,7 @@ def confirm_analysis(
     connection: psycopg.Connection[Any] = Depends(get_connection),
 ) -> AnalysisResult:
     _require_session(connection, session_id)
+    persist_analysis(connection, session_id, analysis)
     save_json(
         get_settings().storage_dir,
         confirmed_analysis_storage_key(session_id),

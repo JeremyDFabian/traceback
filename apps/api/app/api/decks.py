@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.config import get_settings
 from app.db import get_connection
 from app.pdf import extract_pdf
+from app.persistence import persist_slide_passages
 from app.schemas.deck import DeckExtractionResponse
 
 router = APIRouter(tags=["decks"])
@@ -36,7 +37,9 @@ def extract_session_deck(
     if not pdf_path.is_file():
         raise HTTPException(status_code=404, detail="Lecture PDF file not found")
 
+    slides = extract_pdf(Path(pdf_path))
+    persist_slide_passages(connection, session_id, slides)
     return DeckExtractionResponse(
         session_id=str(session_id),
-        slides=extract_pdf(Path(pdf_path)),
+        slides=slides,
     )

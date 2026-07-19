@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.analysis import confirmed_analysis_storage_key
 from app.core.config import get_settings
 from app.db import get_connection
+from app.persistence import persist_flashcard_suggestions
 from app.schemas.analysis import AnalysisResult
 from app.schemas.learning import (
     FlashcardSuggestion,
@@ -92,4 +93,5 @@ def generate_flashcards(
             )
         )
 
+    persist_flashcard_suggestions(connection, session_id, suggestions)
     return suggestions
