@@ -19,7 +19,7 @@ uv run pytest tests/test_member4_demo_flow.py -q
 From the repository root:
 
 ```bash
-corepack pnpm --filter @traceback/web test -- app/page.test.tsx
+corepack pnpm --filter @traceback/web test -- app/flashcard-review.test.tsx
 ```
 
 Neither command uses OpenAI or database credentials.
@@ -46,8 +46,9 @@ verify PDF extraction, matching, grounding, and review behavior.
   handwriting recognition.
 - The matcher is lexical and may mark weak overlap as uncertain.
 - Tests fake database and OpenAI boundaries.
-- The homepage demonstrates one confirmed fixture and is not the complete
-  upload-and-capture application.
+- The frontend team's current homepage is intentionally unchanged by this
+  package; use the API acceptance test and existing review component for the
+  deterministic Member 4 flow.
 - Final-demo deployment, rehearsal, and video recording are separate tasks.
 
 ## Recovery
@@ -57,5 +58,5 @@ verify PDF extraction, matching, grounding, and review behavior.
   and model, or use the deterministic fixture during the demo.
 - Unexpected match: verify the lecture PDF is the committed fixture and the
   selected region is `region-mitochondria`.
-- UI generation error: ensure FastAPI is running at `NEXT_PUBLIC_API_URL` or
-  `http://localhost:8000`.
+- The integrated homepage-to-review handoff remains pending the frontend API
+  integration point.

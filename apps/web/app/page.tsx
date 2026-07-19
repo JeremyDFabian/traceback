@@ -2,8 +2,6 @@
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import demoFixture from "../../../sample-data/mitochondria-atp/expected.json";
-
 type Marker = "star" | "question";
 type Region = {
   id: string;
@@ -19,18 +17,16 @@ type Region = {
 
 type Screen = "setup" | "processing" | "editor" | "trace" | "cards";
 
-const demoRegion = demoFixture.approved_analysis.regions[0];
 const seededRegions: Region[] = [
   {
     id: "mitochondria",
-    label: demoRegion.label,
-    type: demoRegion.type as Region["type"],
-    x: demoRegion.bbox.x * 100,
-    y: demoRegion.bbox.y * 100,
-    width: demoRegion.bbox.width * 100,
-    height: demoRegion.bbox.height * 100,
-    marker: demoRegion.markers.includes("star") ? "star" : undefined,
-    confidence: demoRegion.confidence * 100,
+    label: "Mitochondria",
+    type: "concept",
+    x: 12,
+    y: 24,
+    width: 34,
+    height: 10,
+    confidence: 96,
   },
   {
     id: "atp",

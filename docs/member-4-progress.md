@@ -5,7 +5,7 @@
 `[x]` means the repository contains working code, tests, or documentation for
 the item. Update this file as work lands.
 
-**Latest verification:** API tests: 63 passed; web tests: 6 passed; formatting,
+**Latest verification:** API tests: 73 passed; web tests: 5 passed; formatting,
 lint, type checks, API-client regeneration, and production builds passed.
 
 ## Flashcards — MVP
@@ -23,8 +23,8 @@ lint, type checks, API-client regeneration, and production builds passed.
 - [x] Show each card's slide and exact source passage during review.
 - [x] Request generation only after the student confirms a starred or questioned
       notebook region.
-- [x] Connect the review UI to live generated cards; the homepage posts a
-      confirmed demo region to FastAPI ([homepage](../apps/web/app/page.tsx)).
+- [ ] Connect the existing review UI to the frontend team's integrated student
+      flow after its API handoff is ready.
 - [ ] Complete the full approved-region → slide match → flashcard generation →
       review flow.
 
@@ -42,7 +42,7 @@ lint, type checks, API-client regeneration, and production builds passed.
       without real OpenAI calls
       ([API tests](../apps/api/tests/test_flashcards.py)).
 - [x] Cover flashcard editing, decisions, validation, keyboard-accessible
-      controls, empty state, and homepage integration
+      controls, and empty state
       ([UI tests](../apps/web/app/flashcard-review.test.tsx)).
 - [x] Add a deterministic acceptance test for the confirmed-region → real slide
       match → grounded flashcard path
@@ -60,7 +60,7 @@ lint, type checks, API-client regeneration, and production builds passed.
 
 ## Demo data
 
-- [x] Provide a non-private flashcard review batch for the homepage demo.
+- [x] Provide a non-private flashcard review batch for the deterministic demo.
 - [x] Add a non-private sample notebook page
       ([demo fixture](../sample-data/mitochondria-atp/)).
 - [x] Add a matching lecture PDF.
