@@ -1,5 +1,9 @@
-﻿from app.schemas.analysis import AnalysisResult
-from app.schemas.notebook_analysis import BoundingBox, NotebookAnalysisResult, NotebookRegion
+from app.schemas.analysis import AnalysisResult
+from app.schemas.notebook_analysis import (
+    BoundingBox,
+    NotebookAnalysisResult,
+    NotebookRegion,
+)
 
 
 def test_notebook_analysis_result_matches_member_three_contract() -> None:

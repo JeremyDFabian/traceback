@@ -81,6 +81,86 @@
         "title": "BoundingBox",
         "type": "object"
       },
+      "ConceptDetailsRequest": {
+        "properties": {
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "transcription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcription"
+          }
+        },
+        "required": ["label"],
+        "title": "ConceptDetailsRequest",
+        "type": "object"
+      },
+      "ConceptDetailsResult": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "key_points": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Points",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": ["label", "definition", "confidence"],
+        "title": "ConceptDetailsResult",
+        "type": "object"
+      },
+      "ConceptSource": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": ["title", "url"],
+        "title": "ConceptSource",
+        "type": "object"
+      },
       "DeckExtractionResponse": {
         "properties": {
           "session_id": {
@@ -636,6 +716,261 @@
         "title": "MatchResponse",
         "type": "object"
       },
+      "NotebookAnalysisRequest": {
+        "properties": {
+          "image_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Base64"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "manual_crop_bbox": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoundingBox"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "NotebookAnalysisRequest",
+        "type": "object"
+      },
+      "NotebookAnalysisResult": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "markers": {
+            "items": {
+              "$ref": "#/components/schemas/NotebookMarker"
+            },
+            "title": "Markers",
+            "type": "array"
+          },
+          "page_summary": {
+            "default": "Notebook analysis",
+            "title": "Page Summary",
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/NotebookRegion"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/NotebookRelationship"
+            },
+            "title": "Relationships",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": ["confidence"],
+        "title": "NotebookAnalysisResult",
+        "type": "object"
+      },
+      "NotebookMarker": {
+        "properties": {
+          "bbox": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoundingBox"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "region_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Id"
+          },
+          "type": {
+            "enum": ["star", "question", "highlight", "circle"],
+            "title": "Type",
+            "type": "string"
+          },
+          "uncertainty_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty Note"
+          }
+        },
+        "required": ["id", "type", "confidence"],
+        "title": "NotebookMarker",
+        "type": "object"
+      },
+      "NotebookRegion": {
+        "properties": {
+          "bbox": {
+            "$ref": "#/components/schemas/BoundingBox"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "markers": {
+            "items": {
+              "enum": ["star", "question", "highlight", "circle"],
+              "type": "string"
+            },
+            "title": "Markers",
+            "type": "array"
+          },
+          "transcription": {
+            "title": "Transcription",
+            "type": "string"
+          },
+          "type": {
+            "enum": ["concept", "definition", "question", "example", "other"],
+            "title": "Type",
+            "type": "string"
+          },
+          "uncertainty_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty Note"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "transcription",
+          "type",
+          "bbox",
+          "confidence"
+        ],
+        "title": "NotebookRegion",
+        "type": "object"
+      },
+      "NotebookRelationship": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "source_region_id": {
+            "title": "Source Region Id",
+            "type": "string"
+          },
+          "target_region_id": {
+            "title": "Target Region Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "arrow",
+            "enum": ["arrow", "line", "spatial", "unknown"],
+            "title": "Type",
+            "type": "string"
+          },
+          "uncertainty_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty Note"
+          }
+        },
+        "required": [
+          "id",
+          "source_region_id",
+          "target_region_id",
+          "confidence"
+        ],
+        "title": "NotebookRelationship",
+        "type": "object"
+      },
       "Region": {
         "properties": {
           "bbox": {
@@ -852,6 +1187,45 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/concept-details": {
+      "post": {
+        "operationId": "concept_details_api_concept_details_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConceptDetailsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptDetailsResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Concept Details",
+        "tags": ["concept-details"]
+      }
+    },
     "/api/flashcards/generate": {
       "post": {
         "operationId": "generate_flashcards_api_flashcards_generate_post",
@@ -908,6 +1282,45 @@
         },
         "summary": "Health",
         "tags": ["health"]
+      }
+    },
+    "/api/notebook-analysis": {
+      "post": {
+        "operationId": "analyze_notebook_page_route_api_notebook_analysis_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotebookAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotebookAnalysisResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Notebook Page Route",
+        "tags": ["notebook-analysis"]
       }
     },
     "/api/sessions": {

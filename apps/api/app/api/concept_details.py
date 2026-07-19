@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter
+from fastapi import APIRouter
 
 from app.schemas.concept_details import ConceptDetailsRequest, ConceptDetailsResult
 from app.services.concept_details import get_concept_details

@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from urllib.parse import quote_plus
 
 from openai import OpenAI, OpenAIError
@@ -121,8 +121,8 @@ def analyze_concept_with_gemini(
             model=settings.gemini_model,
             contents=f"{CONCEPT_DETAILS_PROMPT}\n\nConcept: {request.label}\nContext: {context}",
             config=types.GenerateContentConfig(
-                responseMimeType="application/json",
-                responseSchema=gemini_response_schema(GeneratedConceptDetails),
+                response_mime_type="application/json",
+                response_schema=gemini_response_schema(GeneratedConceptDetails),
                 temperature=0,
             ),
         )

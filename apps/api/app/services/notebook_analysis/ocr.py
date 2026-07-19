@@ -2,7 +2,8 @@ import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Literal
+from importlib import import_module
+from typing import Any, Literal, cast
 
 import numpy as np
 
@@ -49,7 +50,7 @@ def analyze_with_easyocr(image_array: np.ndarray) -> OCRAnalysis:
             warnings=["easyocr_initialization_failed_using_fallback_json"],
         )
 
-    raw_results = reader.readtext(image_array)
+    raw_results = cast(list[Any], reader.readtext(image_array))
     blocks = [easyocr_result_to_block(result, image_array.shape) for result in raw_results]
     return OCRAnalysis(
         regions=text_blocks_to_regions(blocks),
@@ -59,9 +60,9 @@ def analyze_with_easyocr(image_array: np.ndarray) -> OCRAnalysis:
 
 @lru_cache
 def get_easyocr_reader() -> Any:
-    import easyocr
-
-    return easyocr.Reader(["en"], gpu=False, verbose=False)
+    module = import_module("easyocr")
+    reader_class = getattr(module, "Reader")
+    return reader_class(["en"], gpu=False, verbose=False)
 
 
 def analyze_with_paddleocr(image_array: np.ndarray) -> OCRAnalysis:
@@ -75,7 +76,7 @@ def analyze_with_paddleocr(image_array: np.ndarray) -> OCRAnalysis:
             warnings=["paddleocr_initialization_failed_using_fallback_json"],
         )
 
-    raw_results = ocr.predict(image_array)
+    raw_results = cast(list[Any], ocr.predict(image_array))
     blocks = paddleocr_results_to_blocks(raw_results, image_array.shape)
     return OCRAnalysis(
         regions=text_blocks_to_regions(blocks),
@@ -87,9 +88,9 @@ def analyze_with_paddleocr(image_array: np.ndarray) -> OCRAnalysis:
 def get_paddleocr_reader() -> Any:
     os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "False")
 
-    from paddleocr import PaddleOCR
-
-    return PaddleOCR(
+    module = import_module("paddleocr")
+    paddle_ocr_class = getattr(module, "PaddleOCR")
+    return paddle_ocr_class(
         text_detection_model_name="PP-OCRv5_mobile_det",
         text_recognition_model_name="en_PP-OCRv5_mobile_rec",
         text_det_limit_side_len=640,
@@ -110,21 +111,29 @@ def easyocr_result_to_block(result: Any, image_shape: tuple[int, ...]) -> OCRTex
 
 
 def paddleocr_results_to_blocks(
-    raw_results: Any,
+    raw_results: list[Any],
     image_shape: tuple[int, ...],
 ) -> list[OCRTextBlock]:
     blocks: list[OCRTextBlock] = []
-    for page_result in raw_results or []:
-        payload = getattr(page_result, "json", page_result)
+    for page_result in raw_results:
+        payload: Any = getattr(page_result, "json", page_result)
         if isinstance(payload, str):
             payload = json.loads(payload)
         if not isinstance(payload, dict):
             continue
 
-        result = payload.get("res", payload)
-        polygons = result.get("rec_polys", result.get("dt_polys", []))
-        texts = result.get("rec_texts", [])
-        confidences = result.get("rec_scores", [])
+        payload_dict = cast(dict[str, Any], payload)
+        result_value: Any = payload_dict.get("res", payload_dict)
+        if not isinstance(result_value, dict):
+            continue
+
+        result_dict = cast(dict[str, Any], result_value)
+        polygons = cast(
+            list[Any],
+            result_dict.get("rec_polys", result_dict.get("dt_polys", [])),
+        )
+        texts = cast(list[Any], result_dict.get("rec_texts", []))
+        confidences = cast(list[Any], result_dict.get("rec_scores", []))
 
         for points, text, confidence in zip(polygons, texts, confidences):
             blocks.append(

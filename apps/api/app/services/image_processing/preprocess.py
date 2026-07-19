@@ -60,7 +60,7 @@ def preprocess_notebook_image(
             if analysis_image is not None
             else None
         ),
-        analysis_image_array=np.array(analysis_image) if analysis_image is not None else None,
+        analysis_image_array=(np.array(analysis_image) if analysis_image is not None else None),
         warnings=warnings,
     )
 
@@ -156,10 +156,16 @@ def warp_document(image_array: np.ndarray, points: np.ndarray) -> np.ndarray | N
     ordered = order_corners(points)
     top_left, top_right, bottom_right, bottom_left = ordered
     target_width = round(
-        max(np.linalg.norm(bottom_right - bottom_left), np.linalg.norm(top_right - top_left))
+        max(
+            np.linalg.norm(bottom_right - bottom_left),
+            np.linalg.norm(top_right - top_left),
+        )
     )
     target_height = round(
-        max(np.linalg.norm(top_right - bottom_right), np.linalg.norm(top_left - bottom_left))
+        max(
+            np.linalg.norm(top_right - bottom_right),
+            np.linalg.norm(top_left - bottom_left),
+        )
     )
     if target_width < 50 or target_height < 50:
         return None

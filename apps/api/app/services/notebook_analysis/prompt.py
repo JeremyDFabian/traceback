@@ -18,5 +18,5 @@ Find:
 
 Return concise labels suitable for clickable overlays.
 If a marker belongs to a region, include that region id.
-If an arrow has unclear endpoints, include the relationship with low confidence and an uncertainty note.
+For unclear arrow endpoints, use low confidence and an uncertainty note.
 """.strip()
