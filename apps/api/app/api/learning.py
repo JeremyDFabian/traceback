@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.analysis import confirmed_analysis_storage_key
 from app.core.config import get_settings
 from app.db import get_connection
+from app.persistence import persist_flashcard_suggestions
 from app.schemas.analysis import AnalysisResult
 from app.schemas.learning import (
     FlashcardSuggestion,
@@ -14,7 +15,7 @@ from app.schemas.learning import (
     GraphNode,
     GraphResponse,
 )
-from app.storage import load_json
+from app.storage import get_object_storage, load_json
 
 router = APIRouter(tags=["learning"])
 
@@ -35,6 +36,7 @@ def _load_confirmed_analysis(
             load_json(
                 get_settings().storage_dir,
                 confirmed_analysis_storage_key(session_id),
+                get_object_storage(get_settings()),
             )
         )
     except FileNotFoundError as error:
@@ -92,4 +94,5 @@ def generate_flashcards(
             )
         )
 
+    persist_flashcard_suggestions(connection, session_id, suggestions)
     return suggestions

@@ -1,4 +1,4 @@
-﻿from functools import lru_cache
+from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
@@ -9,6 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str
     storage_dir: Path = Path(".data/uploads")
+    supabase_url: str | None = None
+    supabase_service_role_key: SecretStr | None = None
+    supabase_storage_bucket: str = "traceback-files"
     analysis_engine: Literal["local", "gemini", "openai"] = "local"
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3-flash-preview"

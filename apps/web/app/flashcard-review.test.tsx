@@ -17,8 +17,9 @@ function card(
       session_id: "00000000-0000-4000-8000-000000000001",
       region_id: `region-${id}`,
       slide_number: 7,
+      slide_text: sourcePassage,
+      highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
     },
-    sourcePassage,
   };
 }
 
@@ -42,6 +43,9 @@ describe("FlashcardReview", () => {
       screen.getByText(
         "The mitochondrion is the main site of aerobic ATP production.",
       ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("x 10% · y 20% · width 30% · height 10%"),
     ).toBeInTheDocument();
     expect(screen.getByText("Card 1 of 1 · 0 reviewed")).toBeInTheDocument();
   });

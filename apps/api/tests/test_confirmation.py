@@ -38,4 +38,8 @@ def test_confirm_analysis_saves_reviewed_result(tmp_path, monkeypatch) -> None:
 
     assert response.status_code == 200
     assert response.json() == payload
-    assert connection.execute.call_count == 2
+    statements = [call.args[0] for call in connection.execute.call_args_list]
+    assert any("select id from public.sessions" in statement for statement in statements)
+    assert any(
+        "update public.sessions set status = 'ready'" in statement for statement in statements
+    )

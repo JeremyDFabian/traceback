@@ -161,6 +161,15 @@
       "FlashcardSourceInput": {
         "additionalProperties": false,
         "properties": {
+          "highlight_boxes": {
+            "items": {
+              "$ref": "#/components/schemas/HighlightBox"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Highlight Boxes",
+            "type": "array"
+          },
           "note_text": {
             "maxLength": 20000,
             "minLength": 1,
@@ -195,7 +204,8 @@
           "region_id",
           "slide_number",
           "note_text",
-          "slide_text"
+          "slide_text",
+          "highlight_boxes"
         ],
         "title": "FlashcardSourceInput",
         "type": "object"
@@ -203,6 +213,15 @@
       "FlashcardSourceReference": {
         "additionalProperties": false,
         "properties": {
+          "highlight_boxes": {
+            "items": {
+              "$ref": "#/components/schemas/HighlightBox"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Highlight Boxes",
+            "type": "array"
+          },
           "region_id": {
             "maxLength": 200,
             "minLength": 1,
@@ -218,9 +237,21 @@
             "minimum": 1.0,
             "title": "Slide Number",
             "type": "integer"
+          },
+          "slide_text": {
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Slide Text",
+            "type": "string"
           }
         },
-        "required": ["session_id", "region_id", "slide_number"],
+        "required": [
+          "session_id",
+          "region_id",
+          "slide_number",
+          "slide_text",
+          "highlight_boxes"
+        ],
         "title": "FlashcardSourceReference",
         "type": "object"
       },
@@ -403,6 +434,38 @@
         },
         "required": ["status", "service"],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HighlightBox": {
+        "additionalProperties": false,
+        "properties": {
+          "height": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Height",
+            "type": "number"
+          },
+          "width": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Width",
+            "type": "number"
+          },
+          "x": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": ["x", "y", "width", "height"],
+        "title": "HighlightBox",
         "type": "object"
       },
       "JobCreateRequest": {

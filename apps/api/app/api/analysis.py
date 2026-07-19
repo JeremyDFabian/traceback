@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import get_settings
 from app.db import get_connection
+from app.persistence import persist_analysis
 from app.schemas.analysis import AnalysisResult
-from app.storage import load_json, save_json
+from app.storage import get_object_storage, load_json, save_json
 
 router = APIRouter(tags=["analysis"])
 
@@ -39,7 +40,14 @@ def save_analysis(
     connection: psycopg.Connection[Any] = Depends(get_connection),
 ) -> AnalysisResult:
     _require_session(connection, session_id)
-    save_json(get_settings().storage_dir, analysis_storage_key(session_id), analysis)
+    persist_analysis(connection, session_id, analysis)
+    settings = get_settings()
+    save_json(
+        settings.storage_dir,
+        analysis_storage_key(session_id),
+        analysis,
+        get_object_storage(settings),
+    )
     return analysis
 
 
@@ -50,8 +58,13 @@ def get_analysis(
 ) -> AnalysisResult:
     _require_session(connection, session_id)
     try:
+        settings = get_settings()
         return AnalysisResult.model_validate(
-            load_json(get_settings().storage_dir, analysis_storage_key(session_id))
+            load_json(
+                settings.storage_dir,
+                analysis_storage_key(session_id),
+                get_object_storage(settings),
+            )
         )
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail="Analysis not found") from error
@@ -64,10 +77,13 @@ def confirm_analysis(
     connection: psycopg.Connection[Any] = Depends(get_connection),
 ) -> AnalysisResult:
     _require_session(connection, session_id)
+    persist_analysis(connection, session_id, analysis)
+    settings = get_settings()
     save_json(
-        get_settings().storage_dir,
+        settings.storage_dir,
         confirmed_analysis_storage_key(session_id),
         analysis,
+        get_object_storage(settings),
     )
     connection.execute(
         "update public.sessions set status = 'ready' where id = %s",
