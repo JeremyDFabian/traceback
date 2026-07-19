@@ -8,13 +8,10 @@ describe("home page", () => {
     render(<Page />);
 
     expect(
-      screen.getByRole("heading", {
-        level: 2,
-        name: /upload a notebook photo/i,
-      }),
+      screen.getByText("Turn every study page into a smarter reference."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/choose a clear notebook photo/i),
+      screen.getByText("Choose a clear notebook photo"),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /run demo/i })).toHaveLength(
       2,

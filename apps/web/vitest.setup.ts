@@ -2,18 +2,18 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
-class IntersectionObserverStub implements IntersectionObserver {
-  readonly root = null;
-  readonly rootMargin = "";
-  readonly thresholds = [];
-  disconnect() {}
+class IntersectionObserverMock {
+  constructor(_callback: IntersectionObserverCallback) {}
+
   observe() {}
-  takeRecords() {
-    return [];
-  }
   unobserve() {}
+  disconnect() {}
 }
 
-globalThis.IntersectionObserver = IntersectionObserverStub;
+Object.defineProperty(globalThis, "IntersectionObserver", {
+  configurable: true,
+  writable: true,
+  value: IntersectionObserverMock,
+});
 
 afterEach(cleanup);
