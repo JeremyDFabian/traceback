@@ -131,9 +131,7 @@ def test_invalid_highlight_boxes_never_call_generator(
     payload = source_payload()
     payload["highlight_boxes"] = boxes
 
-    response = api_client.post(
-        "/api/flashcards/generate", json={"source": payload, "count": 1}
-    )
+    response = api_client.post("/api/flashcards/generate", json={"source": payload, "count": 1})
 
     assert response.status_code == 422
     assert generator.call_count == 0
@@ -353,15 +351,13 @@ def test_generate_response_parses_flashcard_source_reference() -> None:
             {
                 "id": "123e4567-e89b-12d3-a456-426614174001",
                 **generated_flashcard_payload("medium"),
-                    "source": {
-                        "session_id": "123e4567-e89b-12d3-a456-426614174000",
-                        "region_id": "region-1",
-                        "slide_number": 1,
-                        "slide_text": "Slide text",
-                        "highlight_boxes": [
-                            {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1}
-                        ],
-                    },
+                "source": {
+                    "session_id": "123e4567-e89b-12d3-a456-426614174000",
+                    "region_id": "region-1",
+                    "slide_number": 1,
+                    "slide_text": "Slide text",
+                    "highlight_boxes": [{"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1}],
+                },
             }
         ]
     )
