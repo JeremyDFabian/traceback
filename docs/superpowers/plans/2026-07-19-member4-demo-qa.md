@@ -23,11 +23,13 @@
 ### Task 1: Add the Shared Synthetic Demo Fixture
 
 **Files:**
+
 - Create: `sample-data/mitochondria-atp/notebook-page.png`
 - Create: `sample-data/mitochondria-atp/lecture-deck.pdf`
 - Create: `sample-data/mitochondria-atp/expected.json`
 
 **Interfaces:**
+
 - Consumes: `AnalysisResult`, `GenerateFlashcardsRequest`, and `Flashcard` field names from the generated API contract.
 - Produces: `sample-data/mitochondria-atp/expected.json`, the single fixture imported by Tasks 3 and 4.
 
@@ -263,6 +265,7 @@ git commit -m "test: add mitochondria demo fixture"
 ### Task 2: Add Confirmed Matching and Normalized Coordinates
 
 **Files:**
+
 - Modify: `apps/api/app/schemas/deck.py`
 - Modify: `apps/api/app/schemas/match.py`
 - Modify: `apps/api/app/retrieval.py`
@@ -274,6 +277,7 @@ git commit -m "test: add mitochondria demo fixture"
 - Modify: `packages/api-client/src/schema.d.ts`
 
 **Interfaces:**
+
 - Consumes: `HighlightBox` from `app.schemas.flashcards`.
 - Produces: `MatchResponse.highlight_boxes: list[HighlightBox]` and a match endpoint gated by `confirmed_analysis_storage_key(session_id)`.
 
@@ -508,9 +512,11 @@ git commit -m "feat: normalize confirmed slide matches"
 ### Task 3: Add the Backend Acceptance Path
 
 **Files:**
+
 - Create: `apps/api/tests/test_member4_demo_flow.py`
 
 **Interfaces:**
+
 - Consumes: `sample-data/mitochondria-atp/expected.json`, the committed PDF, `get_connection`, and `get_flashcard_generator`.
 - Produces: one hermetic test that proves confirmation → real PDF match → grounded flashcards.
 
@@ -667,10 +673,12 @@ git commit -m "test: cover member 4 demo flow"
 ### Task 4: Share the Fixture with the Homepage Review Test
 
 **Files:**
+
 - Modify: `apps/web/app/page.tsx`
 - Modify: `apps/web/app/page.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `sample-data/mitochondria-atp/expected.json`.
 - Produces: the existing homepage demo request and review test from the shared fixture, with no duplicated source data.
 
@@ -708,24 +716,24 @@ In the expected request body, replace the hard-coded source with:
 Replace the source-passage assertion with:
 
 ```typescript
-    expect(
-      screen.getByText(demoFixture.expected_match.passage),
-    ).toBeInTheDocument();
+expect(
+  screen.getByText(demoFixture.expected_match.passage),
+).toBeInTheDocument();
 ```
 
 Replace the coordinate assertion with:
 
 ```typescript
-    const box = demoFixture.expected_match.highlight_boxes[0];
-    expect(
-      screen.getByText(
-        `x ${Math.round(box.x * 100)}% · y ${Math.round(
-          box.y * 100,
-        )}% · width ${Math.round(box.width * 100)}% · height ${Math.round(
-          box.height * 100,
-        )}%`,
-      ),
-    ).toBeInTheDocument();
+const box = demoFixture.expected_match.highlight_boxes[0];
+expect(
+  screen.getByText(
+    `x ${Math.round(box.x * 100)}% · y ${Math.round(
+      box.y * 100,
+    )}% · width ${Math.round(box.width * 100)}% · height ${Math.round(
+      box.height * 100,
+    )}%`,
+  ),
+).toBeInTheDocument();
 ```
 
 - [ ] **Step 2: Run the homepage test to verify it fails**
@@ -787,11 +795,13 @@ git commit -m "test: share demo fixture with review flow"
 ### Task 5: Document and Verify the Member 4 Demo Package
 
 **Files:**
+
 - Create: `docs/member-4-demo.md`
 - Modify: `README.md`
 - Modify: `docs/member-4-progress.md`
 
 **Interfaces:**
+
 - Consumes: the fixture paths and test commands from Tasks 1–4.
 - Produces: a runnable demo guide and evidence-linked checklist.
 
@@ -799,7 +809,7 @@ git commit -m "test: share demo fixture with review flow"
 
 Create `docs/member-4-demo.md`:
 
-```markdown
+````markdown
 # Member 4 Demo
 
 ## Fixture
@@ -861,7 +871,7 @@ verify PDF extraction, matching, grounding, and review behavior.
   selected region is `region-mitochondria`.
 - UI generation error: ensure FastAPI is running at `NEXT_PUBLIC_API_URL` or
   `http://localhost:8000`.
-```
+````
 
 - [ ] **Step 2: Link the demo guide from README**
 

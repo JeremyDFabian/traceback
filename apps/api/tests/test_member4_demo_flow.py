@@ -61,8 +61,7 @@ def test_confirmed_region_matches_real_pdf_and_generates_grounded_cards(
             json=EXPECTED["approved_analysis"],
         )
         match_response = client.post(
-            f"/api/sessions/{session_id}/regions/"
-            f"{EXPECTED['expected_match']['region_id']}/match"
+            f"/api/sessions/{session_id}/regions/{EXPECTED['expected_match']['region_id']}/match"
         )
         match = match_response.json()
         region = EXPECTED["approved_analysis"]["regions"][0]

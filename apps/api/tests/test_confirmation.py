@@ -54,9 +54,7 @@ def test_match_requires_confirmed_analysis(tmp_path, monkeypatch) -> None:
     app.dependency_overrides[get_connection] = lambda: connection
 
     try:
-        response = TestClient(app).post(
-            f"/api/sessions/{SESSION_ID}/regions/region_1/match"
-        )
+        response = TestClient(app).post(f"/api/sessions/{SESSION_ID}/regions/region_1/match")
     finally:
         app.dependency_overrides.clear()
 

@@ -48,6 +48,12 @@ lecture slide:
 Automated tests replace the OpenAI generator with fakes, so `make test` does
 not require an API key and does not spend API credits.
 
+## Member 4 demo
+
+The deterministic notebook-to-flashcard demo, focused test commands, fallback
+steps, and presentation script are documented in
+[`docs/member-4-demo.md`](docs/member-4-demo.md).
+
 ## Repository layout
 
 ```text
