@@ -1,7 +1,7 @@
 # Flashcard Generation Implementation Handoff
 
-**Date:** 2026-07-17  
-**Branch:** `feature/member4-flashcards`  
+**Date:** 2026-07-17
+**Branch:** `feature/member4-flashcards`
 **Status:** Paused at the Task 2 specification-review gate
 
 ## What is complete

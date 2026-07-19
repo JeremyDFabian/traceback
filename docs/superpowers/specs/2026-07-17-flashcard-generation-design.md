@@ -1,7 +1,7 @@
 # Flashcard Generation Design
 
-**Date:** 2026-07-17  
-**Owner:** Member 4 — Learning Features, Integration & QA  
+**Date:** 2026-07-17
+**Owner:** Member 4 — Learning Features, Integration & QA
 **Status:** Approved design; implementation not started
 
 ## Goal
