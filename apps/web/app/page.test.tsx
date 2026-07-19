@@ -13,6 +13,8 @@ describe("home page", () => {
     expect(
       screen.getByText("Choose a clear notebook photo"),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /run demo/i })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /run demo/i })).toHaveLength(
+      2,
+    );
   });
 });
