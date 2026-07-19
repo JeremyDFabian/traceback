@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.analysis import router as analysis_router
 from app.api.decks import router as decks_router
@@ -9,11 +10,18 @@ from app.api.learning import router as learning_router
 from app.api.matches import router as matches_router
 from app.api.sessions import router as sessions_router
 from app.api.uploads import router as uploads_router
+from app.config import get_settings
 
 app = FastAPI(
     title="Traceback API",
     version="0.1.0",
     description="API for turning notebook pages into interactive study surfaces.",
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[get_settings().web_origin],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 app.include_router(health_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
