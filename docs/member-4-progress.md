@@ -5,8 +5,10 @@
 `[x]` means the repository contains working code, tests, or documentation for
 the item. Update this file as work lands.
 
-**Latest verification:** API tests: 73 passed; web tests: 5 passed; formatting,
+**Latest Member 4 verification:** API tests: 73 passed; web tests: 5 passed;
 lint, type checks, API-client regeneration, and production builds passed.
+After the vision-analysis merge, the expanded API suite requires Python 3.12
+or 3.13 because PaddlePaddle does not provide a Python 3.14 wheel.
 
 ## Flashcards — MVP
 

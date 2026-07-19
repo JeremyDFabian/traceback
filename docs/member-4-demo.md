@@ -10,6 +10,9 @@ The non-private demo pair is stored in `sample-data/mitochondria-atp/`:
 
 ## Focused verification
 
+Use Python 3.12 or 3.13; the vision-analysis dependencies currently include
+PaddlePaddle, which does not provide a Python 3.14 wheel.
+
 From `apps/api`:
 
 ```bash
