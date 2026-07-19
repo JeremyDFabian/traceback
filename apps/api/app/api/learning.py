@@ -48,8 +48,7 @@ def get_graph(
 ) -> GraphResponse:
     analysis = _load_confirmed_analysis(connection, session_id)
     nodes = [
-        GraphNode(id=region.id, label=region.label, type=region.type)
-        for region in analysis.regions
+        GraphNode(id=region.id, label=region.label, type=region.type) for region in analysis.regions
     ]
     edges = [
         GraphEdge(

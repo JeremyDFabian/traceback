@@ -59,9 +59,7 @@ def test_get_processing_job_returns_not_found() -> None:
     app.dependency_overrides[get_connection] = lambda: connection
 
     try:
-        response = TestClient(app).get(
-            f"/api/sessions/{SESSION_ID}/processing-jobs/{JOB_ID}"
-        )
+        response = TestClient(app).get(f"/api/sessions/{SESSION_ID}/processing-jobs/{JOB_ID}")
     finally:
         app.dependency_overrides.clear()
 

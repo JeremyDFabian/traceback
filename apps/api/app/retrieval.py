@@ -34,9 +34,7 @@ def match_region(
             best_score = score
             best_text = slide_text
             query_tokens = _tokens(query)
-            best_highlights = [
-                span for span in slide.spans if _tokens(span.text) & query_tokens
-            ]
+            best_highlights = [span for span in slide.spans if _tokens(span.text) & query_tokens]
 
     if best_slide is None or best_score == 0:
         return MatchResponse(

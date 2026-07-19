@@ -64,9 +64,7 @@ def test_get_session_returns_not_found_for_unknown_session() -> None:
     app.dependency_overrides[get_connection] = lambda: connection
 
     try:
-        response = TestClient(app).get(
-            "/api/sessions/00000000-0000-4000-8000-000000000002"
-        )
+        response = TestClient(app).get("/api/sessions/00000000-0000-4000-8000-000000000002")
     finally:
         app.dependency_overrides.clear()
 

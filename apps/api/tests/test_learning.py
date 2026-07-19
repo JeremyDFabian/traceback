@@ -52,9 +52,7 @@ def test_graph_and_flashcard_contracts_use_confirmed_analysis(tmp_path, monkeypa
     try:
         client = TestClient(app)
         graph_response = client.get(f"/api/sessions/{SESSION_ID}/graph")
-        cards_response = client.post(
-            f"/api/sessions/{SESSION_ID}/flashcards/generate"
-        )
+        cards_response = client.post(f"/api/sessions/{SESSION_ID}/flashcards/generate")
     finally:
         app.dependency_overrides.clear()
 
