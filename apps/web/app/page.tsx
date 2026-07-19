@@ -26,13 +26,12 @@ const seededRegions: Region[] = [
 const stages = ["Correcting your page", "Finding ideas and labels", "Tracing arrows and markers", "Preparing your study surface"];
 
 function UploadField({ label, detail, accept, capture, file, onChange }: { label: string; detail: string; accept: string; capture?: boolean; file?: File; onChange: (event: ChangeEvent<HTMLInputElement>) => void }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  return <button type="button" className="upload-card" onClick={() => inputRef.current?.click()}>
-    <input ref={inputRef} className="sr-only" type="file" accept={accept} capture={capture ? "environment" : undefined} onChange={onChange} />
+  return <label className="upload-card">
+    <input className="sr-only" type="file" accept={accept} capture={capture ? "environment" : undefined} onChange={onChange} />
     <span className="upload-icon" aria-hidden="true">{accept === "application/pdf" ? "↗" : "⌁"}</span>
     <span><strong>{file ? file.name : label}</strong><small>{file ? `${Math.max(1, Math.round(file.size / 1024))} KB ready` : detail}</small></span>
     <span className="upload-action">{file ? "Replace" : "Choose"}</span>
-  </button>;
+  </label>;
 }
 
 function NotebookPreview({ imageUrl, regions, selected, onSelect, editable, onRegionChange }: { imageUrl?: string; regions: Region[]; selected?: string; onSelect: (id: string) => void; editable?: boolean; onRegionChange?: (region: Region) => void }) {
