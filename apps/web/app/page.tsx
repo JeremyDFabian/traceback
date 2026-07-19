@@ -18,6 +18,7 @@ const demoRequest: GenerateRequest = {
     slide_number: 7,
     note_text: "Mitochondria make ATP during aerobic respiration.",
     slide_text: slidePassage,
+    highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
   },
   count: 2,
 };
@@ -48,12 +49,7 @@ export default function Page() {
       const result = (await response.json()) as GenerateResponse;
       if (!Array.isArray(result.flashcards))
         throw new Error("invalid response");
-      setCards(
-        result.flashcards.map((card) => ({
-          ...card,
-          sourcePassage: slidePassage,
-        })),
-      );
+      setCards(result.flashcards);
     } catch {
       setError("Flashcard generation failed. Check the API and try again.");
     } finally {
