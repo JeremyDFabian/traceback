@@ -90,18 +90,32 @@ def get_paddleocr_reader() -> Any:
     os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "False")
     cache_dir = Path(__file__).resolve().parents[5] / ".data" / "paddlex"
     os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str(cache_dir))
-
-    module = import_module("paddleocr")
-    paddle_ocr_class = getattr(module, "PaddleOCR")
-    return paddle_ocr_class(
-        text_detection_model_name="PP-OCRv5_mobile_det",
-        text_recognition_model_name="en_PP-OCRv5_mobile_rec",
-        text_det_limit_side_len=640,
-        text_det_limit_type="max",
-        use_doc_orientation_classify=False,
-        use_doc_unwarping=False,
-        use_textline_orientation=False,
-    )
+    os.environ.setdefault("PADDLE_HOME", str(cache_dir.parent / "paddle"))
+    previous_home = os.environ.get("HOME")
+    previous_user_profile = os.environ.get("USERPROFILE")
+    os.environ["HOME"] = str(cache_dir.parent)
+    os.environ["USERPROFILE"] = str(cache_dir.parent)
+    try:
+        module = import_module("paddleocr")
+        paddle_ocr_class = getattr(module, "PaddleOCR")
+        return paddle_ocr_class(
+            text_detection_model_name="PP-OCRv5_mobile_det",
+            text_recognition_model_name="en_PP-OCRv5_mobile_rec",
+            text_det_limit_side_len=640,
+            text_det_limit_type="max",
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+        )
+    finally:
+        if previous_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = previous_home
+        if previous_user_profile is None:
+            os.environ.pop("USERPROFILE", None)
+        else:
+            os.environ["USERPROFILE"] = previous_user_profile
 
 
 def easyocr_result_to_block(result: Any, image_shape: tuple[int, ...]) -> OCRTextBlock:

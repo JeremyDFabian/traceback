@@ -75,7 +75,6 @@ def analyze_notebook_with_openai(
                 }
             ],
             text_format=NotebookAnalysisResult,
-            temperature=0,
         )
         result = response.output_parsed
     except (OpenAIError, ValidationError):

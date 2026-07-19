@@ -19,4 +19,5 @@ node_modules/
 
 # Local uploads and generated runtime data
 data/
+.data/
 uploads/
