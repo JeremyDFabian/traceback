@@ -59,6 +59,21 @@ function NotebookPreview({ imageUrl, regions, selected, onSelect, editable, onRe
   </div>;
 }
 
+function WhatIsTraceback() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), { threshold: 0.32 });
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  return <section ref={sectionRef} className={`what-is-traceback ${isVisible ? "is-visible" : ""}`} aria-labelledby="what-is-traceback-title"><p className="eyebrow">What is Traceback?</p><h2 id="what-is-traceback-title"><span>Traceback is a study surface that</span><em>keeps the thinking in your notebook connected</em><span>to the lecture ideas that helped you learn it.</span></h2><p className="what-is-note">Capture one page. Confirm what matters. Follow each idea back to its source—then turn the questions you left yourself into the next thing you remember.</p></section>;
+}
+
 export default function Page() {
   const [screen, setScreen] = useState<Screen>("setup");
   const [deck, setDeck] = useState<File>();
@@ -95,7 +110,7 @@ export default function Page() {
   return <main className="app-shell">
     <nav className="topbar"><button className="brand" onClick={() => setScreen("setup")} aria-label="Traceback home"><img src="/traceback-logo-cropped.png" alt="Traceback" /></button><div className="nav-steps"><span className={screen === "setup" ? "active" : ""}>Set up</span><span className={screen === "editor" ? "active" : ""}>Verify</span><span className={["trace", "cards"].includes(screen) ? "active" : ""}>Trace</span></div><span className="session-status"><i /> Session saved</span></nav>
 
-    {screen === "setup" && <section className="landing"><img className="analog-notebook" src="/analog-notebook.png" alt="" aria-hidden="true" /><div className="hero-copy"><p className="eyebrow">Your notes, connected</p><h1>Make every margin<br /><em>mean something.</em></h1><p className="hero-description">Traceback links the ideas on your notebook page to the lecture slides behind them — so you can study from the way you actually learn.</p><div className="trust-row"><span>✦ Editable AI results</span><span>◌ Your source stays visible</span></div><div className="opening-notebook" aria-hidden="true"><div className="notebook-spine" /><div className="notebook-cover"><span>trace</span></div><div className="notebook-page left"><i /><i /><i /></div><div className="notebook-page right"><i /><i /><i /></div><div className="notebook-spark one">✦</div><div className="notebook-spark two">✦</div></div></div><div className="setup-card"><div className="setup-heading"><span className="step-number">01</span><div><p className="eyebrow">Start a study session</p><h2>Bring your materials</h2></div></div><UploadField label="Upload lecture slides" detail="PDF · Your reference material" accept="application/pdf" file={deck} onChange={(event) => setDeck(event.target.files?.[0])} /><UploadField label="Photograph a notebook page" detail="JPG, PNG, or take a photo" accept="image/*" capture file={notebook} onChange={selectNotebook} /><button className="primary-button" disabled={!deck || !notebook} onClick={beginAnalysis}>Find connections <span>→</span></button><p className="privacy-note">Your files are used only for this study session.</p></div></section>}
+    {screen === "setup" && <><section className="landing"><img className="analog-notebook" src="/analog-notebook.png" alt="" aria-hidden="true" /><div className="hero-copy"><p className="eyebrow">Your notes, connected</p><h1>Make every margin<br /><em>mean something.</em></h1><p className="hero-description">Traceback links the ideas on your notebook page to the lecture slides behind them — so you can study from the way you actually learn.</p><div className="trust-row"><span>✦ Editable AI results</span><span>◌ Your source stays visible</span></div><div className="opening-notebook" aria-hidden="true"><div className="notebook-spine" /><div className="notebook-cover"><span>trace</span></div><div className="notebook-page left"><i /><i /><i /></div><div className="notebook-page right"><i /><i /><i /></div><div className="notebook-spark one">✦</div><div className="notebook-spark two">✦</div></div></div><div className="setup-card"><div className="setup-heading"><span className="step-number">01</span><div><p className="eyebrow">Start a study session</p><h2>Bring your materials</h2></div></div><UploadField label="Upload lecture slides" detail="PDF · Your reference material" accept="application/pdf" file={deck} onChange={(event) => setDeck(event.target.files?.[0])} /><UploadField label="Photograph a notebook page" detail="JPG, PNG, or take a photo" accept="image/*" capture file={notebook} onChange={selectNotebook} /><button className="primary-button" disabled={!deck || !notebook} onClick={beginAnalysis}>Find connections <span>→</span></button><p className="privacy-note">Your files are used only for this study session.</p></div></section><WhatIsTraceback /></>}
 
     {screen === "processing" && <section className="processing-screen"><div className="processing-visual"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="page-glyph">⌁</div></div><p className="eyebrow">Creating your trace</p><h1>Reading the connections<br />in your notes.</h1><div className="progress-list">{stages.map((item, index) => <div key={item} className={index <= stage ? "done" : ""}><i>{index < stage ? "✓" : index === stage ? "" : ""}</i><span>{item}</span>{index === stage ? <small>Working</small> : null}</div>)}</div><p className="processing-note">Usually takes less than 20 seconds.</p></section>}
 
