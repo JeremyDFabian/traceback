@@ -57,6 +57,7 @@ def source_payload() -> dict[str, object]:
         "slide_number": 1,
         "note_text": "Key point",
         "slide_text": "Slide text",
+        "highlight_boxes": [{"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1}],
     }
 
 
@@ -94,6 +95,8 @@ def test_generate_endpoint_returns_traceable_flashcards(api_client: TestClient) 
         "session_id": source_payload()["session_id"],
         "region_id": source_payload()["region_id"],
         "slide_number": source_payload()["slide_number"],
+        "slide_text": source_payload()["slide_text"],
+        "highlight_boxes": source_payload()["highlight_boxes"],
     }
     assert generator.received_count == 1
     assert generator.received_source == FlashcardSourceInput(**source_payload())
@@ -104,6 +107,33 @@ def test_invalid_request_never_calls_generator(api_client: TestClient) -> None:
     app.dependency_overrides[get_flashcard_generator] = lambda: generator
 
     response = api_client.post("/api/flashcards/generate", json=valid_request_body(count=0))
+
+    assert response.status_code == 422
+    assert generator.call_count == 0
+
+
+@pytest.mark.parametrize(
+    "boxes",
+    [
+        [],
+        [{"x": -0.1, "y": 0.2, "width": 0.3, "height": 0.1}],
+        [{"x": 0.1, "y": 0.2, "width": 0, "height": 0.1}],
+        [{"x": 0.9, "y": 0.2, "width": 0.2, "height": 0.1}],
+        [{"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1}] * 51,
+    ],
+    ids=["empty", "negative_origin", "zero_width", "outside_slide", "too_many"],
+)
+def test_invalid_highlight_boxes_never_call_generator(
+    api_client: TestClient, boxes: list[dict[str, float]]
+) -> None:
+    generator = FakeFlashcardGenerator(flashcards=generated_batch("Question").flashcards)
+    app.dependency_overrides[get_flashcard_generator] = lambda: generator
+    payload = source_payload()
+    payload["highlight_boxes"] = boxes
+
+    response = api_client.post(
+        "/api/flashcards/generate", json={"source": payload, "count": 1}
+    )
 
     assert response.status_code == 422
     assert generator.call_count == 0
@@ -323,11 +353,15 @@ def test_generate_response_parses_flashcard_source_reference() -> None:
             {
                 "id": "123e4567-e89b-12d3-a456-426614174001",
                 **generated_flashcard_payload("medium"),
-                "source": {
-                    "session_id": "123e4567-e89b-12d3-a456-426614174000",
-                    "region_id": "region-1",
-                    "slide_number": 1,
-                },
+                    "source": {
+                        "session_id": "123e4567-e89b-12d3-a456-426614174000",
+                        "region_id": "region-1",
+                        "slide_number": 1,
+                        "slide_text": "Slide text",
+                        "highlight_boxes": [
+                            {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1}
+                        ],
+                    },
             }
         ]
     )
@@ -344,5 +378,7 @@ def test_flashcard_rejects_invalid_id() -> None:
                 "session_id": "123e4567-e89b-12d3-a456-426614174000",
                 "region_id": "region-1",
                 "slide_number": 1,
+                "slide_text": "Slide text",
+                "highlight_boxes": [{"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1}],
             },
         )
