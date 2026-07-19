@@ -94,7 +94,7 @@ export interface components {
        * Count
        * @default 5
        */
-      count: number;
+      count?: number;
       source: components["schemas"]["FlashcardSourceInput"];
     };
     /** GenerateFlashcardsResponse */
