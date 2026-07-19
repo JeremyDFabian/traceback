@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 .next/
+.superpowers/
 .pytest_cache/
 .ruff_cache/
 .venv/
