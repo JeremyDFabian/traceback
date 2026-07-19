@@ -1,7 +1,7 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Difficulty = Literal["easy", "medium", "hard"]
 
@@ -10,12 +10,26 @@ class FlashcardSchema(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
+class HighlightBox(FlashcardSchema):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(gt=0, le=1)
+    height: float = Field(gt=0, le=1)
+
+    @model_validator(mode="after")
+    def stays_within_slide(self) -> "HighlightBox":
+        if self.x + self.width > 1 or self.y + self.height > 1:
+            raise ValueError("highlight box must stay within the slide")
+        return self
+
+
 class FlashcardSourceInput(FlashcardSchema):
     session_id: UUID
     region_id: str = Field(min_length=1, max_length=200)
     slide_number: int = Field(ge=1)
     note_text: str = Field(min_length=1, max_length=20_000)
     slide_text: str = Field(min_length=1, max_length=50_000)
+    highlight_boxes: list[HighlightBox] = Field(min_length=1, max_length=50)
 
 
 class GenerateFlashcardsRequest(FlashcardSchema):
@@ -37,6 +51,8 @@ class FlashcardSourceReference(FlashcardSchema):
     session_id: UUID
     region_id: str = Field(min_length=1, max_length=200)
     slide_number: int = Field(ge=1)
+    slide_text: str = Field(min_length=1, max_length=50_000)
+    highlight_boxes: list[HighlightBox] = Field(min_length=1, max_length=50)
 
 
 class Flashcard(FlashcardSchema):
