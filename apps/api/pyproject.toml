@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Traceback FastAPI service"
 requires-python = ">=3.12"
 dependencies = [
+    "easyocr>=1.7.2,<2",
     "fastapi>=0.115,<1",
     "opencv-python-headless>=4.10,<5",
     "openai>=2,<3",

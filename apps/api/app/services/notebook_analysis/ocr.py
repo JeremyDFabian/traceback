@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Literal
 
 import numpy as np
@@ -37,17 +38,28 @@ def analyze_regions_with_ocr(
 
 def analyze_with_easyocr(image_array: np.ndarray) -> OCRAnalysis:
     try:
-        import easyocr
+        reader = get_easyocr_reader()
     except ImportError:
         return OCRAnalysis(regions=[], warnings=["easyocr_not_installed_using_fallback_json"])
+    except Exception:
+        return OCRAnalysis(
+            regions=[],
+            warnings=["easyocr_initialization_failed_using_fallback_json"],
+        )
 
-    reader = easyocr.Reader(["en"], gpu=False)
     raw_results = reader.readtext(image_array)
     blocks = [easyocr_result_to_block(result, image_array.shape) for result in raw_results]
     return OCRAnalysis(
         regions=text_blocks_to_regions(blocks),
         warnings=["easyocr_analysis_used"],
     )
+
+
+@lru_cache
+def get_easyocr_reader() -> Any:
+    import easyocr
+
+    return easyocr.Reader(["en"], gpu=False, verbose=False)
 
 
 def analyze_with_paddleocr(image_array: np.ndarray) -> OCRAnalysis:
@@ -74,7 +86,10 @@ def easyocr_result_to_block(result: Any, image_shape: tuple[int, ...]) -> OCRTex
     )
 
 
-def paddleocr_results_to_blocks(raw_results: Any, image_shape: tuple[int, ...]) -> list[OCRTextBlock]:
+def paddleocr_results_to_blocks(
+    raw_results: Any,
+    image_shape: tuple[int, ...],
+) -> list[OCRTextBlock]:
     blocks: list[OCRTextBlock] = []
     for page_result in raw_results or []:
         for line in page_result or []:
