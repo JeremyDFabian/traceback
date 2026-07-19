@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     openai_api_key: SecretStr | None = None
     openai_text_model: str | None = None
+    web_origin: str = "http://localhost:3000"
 
     @field_validator("openai_api_key", "openai_text_model", mode="before")
     @classmethod
