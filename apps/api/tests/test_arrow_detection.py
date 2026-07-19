@@ -1,4 +1,4 @@
-import cv2
+﻿import cv2
 import numpy as np
 
 from app.schemas.notebook_analysis import BoundingBox, NotebookRegion
@@ -14,6 +14,7 @@ def sample_regions() -> list[NotebookRegion]:
         NotebookRegion(
             id="region_1",
             label="A",
+            transcription="A",
             type="concept",
             bbox=BoundingBox(x=0.18, y=0.30, width=0.24, height=0.08),
             confidence=0.9,
@@ -21,6 +22,7 @@ def sample_regions() -> list[NotebookRegion]:
         NotebookRegion(
             id="region_2",
             label="B",
+            transcription="B",
             type="concept",
             bbox=BoundingBox(x=0.62, y=0.31, width=0.12, height=0.07),
             confidence=0.9,

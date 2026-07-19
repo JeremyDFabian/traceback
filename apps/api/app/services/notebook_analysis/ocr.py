@@ -1,3 +1,5 @@
+import json
+import os
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Literal
@@ -64,16 +66,37 @@ def get_easyocr_reader() -> Any:
 
 def analyze_with_paddleocr(image_array: np.ndarray) -> OCRAnalysis:
     try:
-        from paddleocr import PaddleOCR
+        ocr = get_paddleocr_reader()
     except ImportError:
         return OCRAnalysis(regions=[], warnings=["paddleocr_not_installed_using_fallback_json"])
+    except Exception:
+        return OCRAnalysis(
+            regions=[],
+            warnings=["paddleocr_initialization_failed_using_fallback_json"],
+        )
 
-    ocr = PaddleOCR(use_angle_cls=True, lang="en")
-    raw_results = ocr.ocr(image_array, cls=True)
+    raw_results = ocr.predict(image_array)
     blocks = paddleocr_results_to_blocks(raw_results, image_array.shape)
     return OCRAnalysis(
         regions=text_blocks_to_regions(blocks),
         warnings=["paddleocr_analysis_used"],
+    )
+
+
+@lru_cache
+def get_paddleocr_reader() -> Any:
+    os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "False")
+
+    from paddleocr import PaddleOCR
+
+    return PaddleOCR(
+        text_detection_model_name="PP-OCRv5_mobile_det",
+        text_recognition_model_name="en_PP-OCRv5_mobile_rec",
+        text_det_limit_side_len=640,
+        text_det_limit_type="max",
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
     )
 
 
@@ -92,15 +115,23 @@ def paddleocr_results_to_blocks(
 ) -> list[OCRTextBlock]:
     blocks: list[OCRTextBlock] = []
     for page_result in raw_results or []:
-        for line in page_result or []:
-            points = line[0]
-            text = str(line[1][0]).strip()
-            confidence = float(line[1][1])
+        payload = getattr(page_result, "json", page_result)
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+        if not isinstance(payload, dict):
+            continue
+
+        result = payload.get("res", payload)
+        polygons = result.get("rec_polys", result.get("dt_polys", []))
+        texts = result.get("rec_texts", [])
+        confidences = result.get("rec_scores", [])
+
+        for points, text, confidence in zip(polygons, texts, confidences):
             blocks.append(
                 OCRTextBlock(
-                    text=text,
+                    text=str(text).strip(),
                     bbox=points_to_normalized_bbox(points, image_shape),
-                    confidence=confidence,
+                    confidence=float(confidence),
                 )
             )
     return blocks

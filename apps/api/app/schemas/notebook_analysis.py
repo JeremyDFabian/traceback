@@ -22,10 +22,10 @@ class NotebookMarker(BaseModel):
 class NotebookRegion(BaseModel):
     id: str
     label: str
-    transcription: str | None = None
-    type: Literal["concept", "definition", "example", "diagram", "heading", "unknown"]
+    transcription: str
+    type: Literal["concept", "definition", "question", "example", "other"]
     bbox: BoundingBox
-    markers: list[str] = Field(default_factory=list)
+    markers: list[Literal["star", "question", "highlight", "circle"]] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
     uncertainty_note: str | None = None
 
@@ -47,7 +47,7 @@ class NotebookAnalysisRequest(BaseModel):
 
 
 class NotebookAnalysisResult(BaseModel):
-    page_summary: str | None = None
+    page_summary: str = "Notebook analysis"
     regions: list[NotebookRegion] = Field(default_factory=list)
     relationships: list[NotebookRelationship] = Field(default_factory=list)
     markers: list[NotebookMarker] = Field(default_factory=list)

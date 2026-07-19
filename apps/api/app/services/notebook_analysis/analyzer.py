@@ -3,18 +3,21 @@ from app.schemas.notebook_analysis import (
     BoundingBox,
     NotebookAnalysisRequest,
     NotebookAnalysisResult,
-    NotebookMarker,
     NotebookRegion,
     NotebookRelationship,
 )
 from app.services.image_processing.preprocess import (
     ProcessedNotebookImage,
     decode_base64_image,
+    get_analysis_image_array,
     preprocess_notebook_image,
 )
 from app.services.notebook_analysis.arrows import detect_arrow_relationships
+from app.services.notebook_analysis.cleanup import clean_analysis_result
+from app.services.notebook_analysis.gemini import analyze_notebook_with_gemini
 from app.services.notebook_analysis.markers import detect_markers
 from app.services.notebook_analysis.ocr import analyze_regions_with_ocr
+from app.services.notebook_analysis.openai import analyze_notebook_with_openai
 
 
 class NotebookAnalysisError(ValueError):
@@ -27,34 +30,62 @@ async def analyze_notebook_page(
 ) -> NotebookAnalysisResult:
     """Analyze notebook input and return overlay-ready structured data."""
     active_settings = settings or get_settings()
-    processed_image = preprocess_request_image(request)
+    processed_image = preprocess_request_image(
+        request,
+        include_local_analysis=not active_settings.remote_vision_enabled,
+    )
     warnings = list(processed_image.warnings) if processed_image is not None else []
 
-    detected_markers: list[NotebookMarker] = []
-    if processed_image is not None:
-        detected_markers = detect_markers(processed_image.analysis_image_array)
+    if active_settings.openai_analysis_enabled:
+        if processed_image is None:
+            warnings.append("openai_requires_image_base64_using_local_fallback")
+        else:
+            openai_analysis = analyze_notebook_with_openai(
+                decode_base64_image(processed_image.gemini_image_base64),
+                active_settings,
+            )
+            warnings.extend(openai_analysis.warnings)
+            if openai_analysis.result is not None:
+                return finalize_remote_result(
+                    openai_analysis.result,
+                    processed_image,
+                    warnings,
+                )
+    elif active_settings.gemini_analysis_enabled:
+        if processed_image is None:
+            warnings.append("gemini_requires_image_base64_using_local_fallback")
+        else:
+            gemini_analysis = analyze_notebook_with_gemini(
+                decode_base64_image(processed_image.gemini_image_base64),
+                active_settings,
+            )
+            warnings.extend(gemini_analysis.warnings)
+            if gemini_analysis.result is not None:
+                return finalize_remote_result(
+                    gemini_analysis.result,
+                    processed_image,
+                    warnings,
+                )
 
     if active_settings.ocr_analysis_enabled:
         if processed_image is None:
             warnings.append("ocr_requires_image_base64_using_fallback_json")
             return build_mock_analysis_result(warnings=warnings)
 
-        ocr_analysis = analyze_regions_with_ocr(
-            processed_image.analysis_image_array,
-            active_settings,
-        )
+        analysis_image = get_analysis_image_array(processed_image)
+        ocr_analysis = analyze_regions_with_ocr(analysis_image, active_settings)
         warnings.extend(ocr_analysis.warnings)
 
         if ocr_analysis.regions:
             detected_relationships = detect_arrow_relationships(
-                processed_image.analysis_image_array,
+                analysis_image,
                 ocr_analysis.regions,
             )
             return NotebookAnalysisResult(
                 page_summary="OCR notebook analysis result",
                 regions=ocr_analysis.regions,
                 relationships=detected_relationships,
-                markers=detected_markers,
+                markers=detect_markers(analysis_image),
                 warnings=warnings,
                 confidence=average_region_confidence(ocr_analysis.regions),
             )
@@ -63,24 +94,50 @@ async def analyze_notebook_page(
 
     mock_result = build_mock_analysis_result(
         warnings=warnings,
-        detected_markers=detected_markers,
         include_mock_relationships=processed_image is None,
     )
     if processed_image is not None:
+        analysis_image = get_analysis_image_array(processed_image)
         mock_result.relationships = detect_arrow_relationships(
-            processed_image.analysis_image_array,
+            analysis_image,
             mock_result.regions,
         )
+        mock_result.markers = detect_markers(analysis_image)
     return mock_result
 
 
-def preprocess_request_image(request: NotebookAnalysisRequest) -> ProcessedNotebookImage | None:
+def finalize_remote_result(
+    result: NotebookAnalysisResult,
+    processed_image: ProcessedNotebookImage,
+    warnings: list[str],
+) -> NotebookAnalysisResult:
+    relationships = result.relationships
+    if not relationships:
+        analysis_image = get_analysis_image_array(processed_image)
+        relationships = detect_arrow_relationships(analysis_image, result.regions)
+
+    return clean_analysis_result(
+        result.model_copy(
+            update={
+                "relationships": relationships,
+                "markers": result.markers,
+                "warnings": [*warnings, *result.warnings],
+            }
+        )
+    )
+
+
+def preprocess_request_image(
+    request: NotebookAnalysisRequest,
+    include_local_analysis: bool = True,
+) -> ProcessedNotebookImage | None:
     if request.image_base64 is not None:
         try:
             image_bytes = decode_base64_image(request.image_base64)
             return preprocess_notebook_image(
                 image_bytes,
                 manual_crop_bbox=request.manual_crop_bbox,
+                include_local_analysis=include_local_analysis,
             )
         except ValueError as exc:
             raise NotebookAnalysisError(str(exc)) from exc
@@ -100,20 +157,22 @@ def average_region_confidence(regions: list[NotebookRegion]) -> float:
 
 def build_mock_analysis_result(
     warnings: list[str] | None = None,
-    detected_markers: list[NotebookMarker] | None = None,
     include_mock_relationships: bool = True,
 ) -> NotebookAnalysisResult:
-    markers = detected_markers or []
-    relationships = [
-        NotebookRelationship(
-            id="edge_1",
-            source_region_id="region_1",
-            target_region_id="region_2",
-            label="produces",
-            type="arrow",
-            confidence=0.78,
-        )
-    ] if include_mock_relationships else []
+    relationships = (
+        [
+            NotebookRelationship(
+                id="edge_1",
+                source_region_id="region_1",
+                target_region_id="region_2",
+                label="produces",
+                type="arrow",
+                confidence=0.78,
+            )
+        ]
+        if include_mock_relationships
+        else []
+    )
 
     return NotebookAnalysisResult(
         page_summary="Mock notebook analysis result",
@@ -138,8 +197,7 @@ def build_mock_analysis_result(
             ),
         ],
         relationships=relationships,
-        markers=markers,
+        markers=[],
         warnings=warnings or [],
         confidence=0.89,
     )
-
