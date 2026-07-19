@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+  "/api/flashcards/generate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Generate Flashcards */
+    post: operations["generate_flashcards_api_flashcards_generate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/health": {
     parameters: {
       query?: never;
@@ -25,6 +42,71 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** Flashcard */
+    Flashcard: {
+      /** Answer */
+      answer: string;
+      /**
+       * Difficulty
+       * @enum {string}
+       */
+      difficulty: "easy" | "medium" | "hard";
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Question */
+      question: string;
+      source: components["schemas"]["FlashcardSourceReference"];
+    };
+    /** FlashcardSourceInput */
+    FlashcardSourceInput: {
+      /** Note Text */
+      note_text: string;
+      /** Region Id */
+      region_id: string;
+      /**
+       * Session Id
+       * Format: uuid
+       */
+      session_id: string;
+      /** Slide Number */
+      slide_number: number;
+      /** Slide Text */
+      slide_text: string;
+    };
+    /** FlashcardSourceReference */
+    FlashcardSourceReference: {
+      /** Region Id */
+      region_id: string;
+      /**
+       * Session Id
+       * Format: uuid
+       */
+      session_id: string;
+      /** Slide Number */
+      slide_number: number;
+    };
+    /** GenerateFlashcardsRequest */
+    GenerateFlashcardsRequest: {
+      /**
+       * Count
+       * @default 5
+       */
+      count: number;
+      source: components["schemas"]["FlashcardSourceInput"];
+    };
+    /** GenerateFlashcardsResponse */
+    GenerateFlashcardsResponse: {
+      /** Flashcards */
+      flashcards: components["schemas"]["Flashcard"][];
+    };
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][];
+    };
     /** HealthResponse */
     HealthResponse: {
       /**
@@ -38,6 +120,19 @@ export interface components {
        */
       status: "ok";
     };
+    /** ValidationError */
+    ValidationError: {
+      /** Context */
+      ctx?: Record<string, never>;
+      /** Input */
+      input?: unknown;
+      /** Location */
+      loc: (string | number)[];
+      /** Message */
+      msg: string;
+      /** Error Type */
+      type: string;
+    };
   };
   responses: never;
   parameters: never;
@@ -47,6 +142,39 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  generate_flashcards_api_flashcards_generate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GenerateFlashcardsRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenerateFlashcardsResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   health_api_health_get: {
     parameters: {
       query?: never;
