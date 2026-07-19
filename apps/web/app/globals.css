@@ -269,6 +269,32 @@ p {
   font-weight: 700;
 }
 
+.region-confirmation {
+  border: 1px solid oklch(0.83 0.018 155);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  background: oklch(0.99 0.006 90);
+}
+
+.region-consent {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 1.25rem 0;
+  font-weight: 700;
+}
+
+.region-consent input {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: oklch(0.45 0.09 155);
+}
+
+.region-consent input:focus-visible {
+  outline: 3px solid oklch(0.55 0.12 155);
+  outline-offset: 3px;
+}
+
 @media (max-width: 36rem) {
   main {
     padding-top: 1.5rem;
