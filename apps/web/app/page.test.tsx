@@ -60,9 +60,7 @@ describe("home page", () => {
             note_text: "Mitochondria make ATP during aerobic respiration.",
             slide_text:
               "The mitochondrion is the main site of aerobic ATP production.",
-            highlight_boxes: [
-              { x: 0.1, y: 0.2, width: 0.3, height: 0.1 },
-            ],
+            highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
           },
           count: 2,
         }),
