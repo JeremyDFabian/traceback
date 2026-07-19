@@ -14,6 +14,9 @@ const generatedCards = {
         session_id: "00000000-0000-4000-8000-000000000001",
         region_id: "region-mitochondria",
         slide_number: 7,
+        slide_text:
+          "The mitochondrion is the main site of aerobic ATP production.",
+        highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
       },
     },
   ],
@@ -57,6 +60,7 @@ describe("home page", () => {
             note_text: "Mitochondria make ATP during aerobic respiration.",
             slide_text:
               "The mitochondrion is the main site of aerobic ATP production.",
+            highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
           },
           count: 2,
         }),
@@ -66,6 +70,9 @@ describe("home page", () => {
       screen.getByText(
         "The mitochondrion is the main site of aerobic ATP production.",
       ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("x 10% · y 20% · width 30% · height 10%"),
     ).toBeInTheDocument();
   });
 

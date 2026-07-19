@@ -8,9 +8,7 @@ type Flashcard = components["schemas"]["Flashcard"];
 type ReviewDecision = "pending" | "approved" | "rejected";
 type ValidationErrors = Partial<Record<"question" | "answer", string>>;
 
-export type ReviewFlashcard = Flashcard & {
-  sourcePassage: string;
-};
+export type ReviewFlashcard = Flashcard;
 
 export type FlashcardReviewProps = {
   cards: ReviewFlashcard[];
@@ -187,7 +185,16 @@ export function FlashcardReview({ cards, onComplete }: FlashcardReviewProps) {
             Slide {active.card.source.slide_number} ·{" "}
             {active.card.source.region_id}
           </p>
-          <blockquote>{active.card.sourcePassage}</blockquote>
+          <blockquote>{active.card.source.slide_text}</blockquote>
+          <ul aria-label="Highlight coordinates">
+            {active.card.source.highlight_boxes.map((box, index) => (
+              <li key={index}>
+                x {Math.round(box.x * 100)}% · y {Math.round(box.y * 100)}% ·
+                width {Math.round(box.width * 100)}% · height{" "}
+                {Math.round(box.height * 100)}%
+              </li>
+            ))}
+          </ul>
         </aside>
 
         <div className="review-decisions">
