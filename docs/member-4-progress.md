@@ -5,7 +5,7 @@
 `[x]` means the repository contains working code, tests, or documentation for
 the item. Update this file as work lands.
 
-**Latest verification:** API tests: 40 passed; web tests: 6 passed; web
+**Latest verification:** API tests: 45 passed; web tests: 6 passed; web
 typecheck and lint passed.
 
 ## Flashcards — MVP
@@ -46,8 +46,10 @@ typecheck and lint passed.
   ([UI tests](../apps/web/app/flashcard-review.test.tsx)).
 - [ ] Add an end-to-end acceptance test for the complete MVP student flow.
 - [x] Verify generation cannot start before region confirmation.
+- [x] Verify every generated flashcard exposes its source passage and highlight
+  coordinates through the API and review UI.
 - [ ] Verify every slide match exposes its source passage and highlight
-  coordinates.
+  coordinates once retrieval integration lands.
 - [ ] Verify low-confidence results remain visibly distinct.
 - [ ] Verify keyboard navigation, readable contrast, phone-camera input, and the
   manual upload fallback.

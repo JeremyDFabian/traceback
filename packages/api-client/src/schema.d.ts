@@ -62,6 +62,8 @@ export interface components {
     };
     /** FlashcardSourceInput */
     FlashcardSourceInput: {
+      /** Highlight Boxes */
+      highlight_boxes: components["schemas"]["HighlightBox"][];
       /** Note Text */
       note_text: string;
       /** Region Id */
@@ -78,6 +80,8 @@ export interface components {
     };
     /** FlashcardSourceReference */
     FlashcardSourceReference: {
+      /** Highlight Boxes */
+      highlight_boxes: components["schemas"]["HighlightBox"][];
       /** Region Id */
       region_id: string;
       /**
@@ -87,6 +91,8 @@ export interface components {
       session_id: string;
       /** Slide Number */
       slide_number: number;
+      /** Slide Text */
+      slide_text: string;
     };
     /** GenerateFlashcardsRequest */
     GenerateFlashcardsRequest: {
@@ -119,6 +125,17 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** HighlightBox */
+    HighlightBox: {
+      /** Height */
+      height: number;
+      /** Width */
+      width: number;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
     };
     /** ValidationError */
     ValidationError: {

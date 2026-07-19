@@ -60,6 +60,8 @@ def generate_flashcards(
         session_id=request.source.session_id,
         region_id=request.source.region_id,
         slide_number=request.source.slide_number,
+        slide_text=request.source.slide_text,
+        highlight_boxes=request.source.highlight_boxes,
     )
     return GenerateFlashcardsResponse(
         flashcards=[
