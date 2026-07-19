@@ -16,6 +16,7 @@ type Region = {
   transcription?: string;
   explanation?: string;
   trustedSourceQueries?: string[];
+  referenceLinks?: Array<{ title: string; url: string }>;
 };
 
 type ApiNotebookRegion = {
@@ -47,26 +48,13 @@ type ConceptDetails = {
   sources: Array<{ title: string; url: string }>;
 };
 
+type SourceStatus = "idle" | "loading" | "ready" | "unavailable";
+
 type Screen = "setup" | "processing" | "editor" | "trace" | "cards";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const demoTypedText =
   "Cells make usable energy through cellular respiration. This process uses mitochondria to help produce ATP, the energy cells can use for work.";
-const demoSources = [
-  {
-    title: "Cellular respiration · Wikipedia",
-    url: "https://en.wikipedia.org/wiki/Cellular_respiration",
-  },
-  {
-    title: "Energy and metabolism · OpenStax",
-    url: "https://openstax.org/books/biology-2e/pages/7-introduction",
-  },
-  {
-    title: "Cellular respiration · Khan Academy",
-    url: "https://www.khanacademy.org/science/biology/cellular-respiration-and-fermentation",
-  },
-];
-
 const seededRegions: Region[] = [
   {
     id: "mitochondria",
@@ -77,6 +65,22 @@ const seededRegions: Region[] = [
     width: 34,
     height: 10,
     confidence: 96,
+    explanation:
+      "Mitochondria are the parts of a cell where most aerobic respiration happens.",
+    trustedSourceQueries: [
+      "mitochondria structure and function",
+      "mitochondria aerobic respiration",
+    ],
+    referenceLinks: [
+      {
+        title: "Mitochondria · OpenStax",
+        url: "https://openstax.org/books/biology-2e/pages/4-3-eukaryotic-cells",
+      },
+      {
+        title: "Mitochondrion · Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Mitochondrion",
+      },
+    ],
   },
   {
     id: "atp",
@@ -88,6 +92,19 @@ const seededRegions: Region[] = [
     height: 10,
     marker: "star",
     confidence: 91,
+    explanation:
+      "ATP is the energy-carrying molecule cells use to power most of their work.",
+    trustedSourceQueries: ["ATP cellular energy", "ATP structure and function"],
+    referenceLinks: [
+      {
+        title: "ATP and energy · Khan Academy",
+        url: "https://www.khanacademy.org/science/biology/cellular-respiration-and-fermentation/atp-structure-and-hydrolysis/a/adenosine-triphosphate",
+      },
+      {
+        title: "Adenosine triphosphate · Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Adenosine_triphosphate",
+      },
+    ],
   },
   {
     id: "respiration",
@@ -99,6 +116,22 @@ const seededRegions: Region[] = [
     height: 10,
     marker: "question",
     confidence: 84,
+    explanation:
+      "Cellular respiration releases usable energy from food and stores it in ATP.",
+    trustedSourceQueries: [
+      "cellular respiration overview biology",
+      "cellular respiration ATP production",
+    ],
+    referenceLinks: [
+      {
+        title: "Cellular respiration · OpenStax",
+        url: "https://openstax.org/books/biology-2e/pages/7-1-energy-in-living-systems",
+      },
+      {
+        title: "Cellular respiration · Khan Academy",
+        url: "https://www.khanacademy.org/science/biology/cellular-respiration-and-fermentation",
+      },
+    ],
   },
 ];
 
@@ -184,6 +217,7 @@ function NotebookPreview({
   selected,
   onSelect,
   editable,
+  allowDragging,
   onRegionChange,
 }: {
   imageUrl?: string;
@@ -191,6 +225,7 @@ function NotebookPreview({
   selected?: string;
   onSelect: (id: string) => void;
   editable?: boolean;
+  allowDragging?: boolean;
   onRegionChange?: (region: Region) => void;
 }) {
   const drag = useRef<
@@ -204,7 +239,7 @@ function NotebookPreview({
     | undefined
   >(undefined);
   function move(event: React.PointerEvent<HTMLButtonElement>, region: Region) {
-    if (!editable) return;
+    if (!editable || !allowDragging) return;
     drag.current = {
       id: region.id,
       startX: event.clientX,
@@ -271,8 +306,10 @@ function NotebookPreview({
             height: `${region.height}%`,
           }}
           onClick={() => onSelect(region.id)}
-          onPointerDown={(event) => move(event, region)}
-          onPointerMove={moving}
+          onPointerDown={
+            allowDragging ? (event) => move(event, region) : undefined
+          }
+          onPointerMove={allowDragging ? moving : undefined}
           onPointerUp={() => {
             drag.current = undefined;
           }}
@@ -285,8 +322,8 @@ function NotebookPreview({
                 : ""}
             {region.label}
           </span>
-          {selected === region.id && editable ? (
-            <i className="drag-handle">↕</i>
+          {selected === region.id && editable && allowDragging ? (
+            <i className="drag-handle">Drag</i>
           ) : null}
         </button>
       ))}
@@ -589,13 +626,15 @@ export default function Page() {
   const [isLiveAnalysis, setIsLiveAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string>();
   const [conceptDetails, setConceptDetails] = useState<ConceptDetails>();
+  const [sourceStatus, setSourceStatus] = useState<SourceStatus>("idle");
+  const [isRepositioning, setIsRepositioning] = useState(false);
   const selected = useMemo(
     () => regions.find((region) => region.id === selectedId) ?? regions[0],
     [regions, selectedId],
   );
   const activeAnalysis = pageAnalyses[activePageIndex];
   const visibleSources =
-    conceptDetails?.sources ?? (selected?.explanation ? [] : demoSources);
+    conceptDetails?.sources ?? selected?.referenceLinks ?? [];
 
   useEffect(
     () => () => {
@@ -622,10 +661,13 @@ export default function Page() {
   useEffect(() => {
     if (screen !== "trace" || !selected?.explanation) {
       setConceptDetails(undefined);
+      setSourceStatus("idle");
       return;
     }
 
     const controller = new AbortController();
+    setConceptDetails(undefined);
+    setSourceStatus("loading");
     void fetch(`${apiBaseUrl}/api/concept-details`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -641,10 +683,16 @@ export default function Page() {
         if (!response.ok) throw new Error("Unable to retrieve sources.");
         return (await response.json()) as ConceptDetails;
       })
-      .then((details) => setConceptDetails(details))
+      .then((details) => {
+        if (controller.signal.aborted) return;
+        setConceptDetails(details);
+        setSourceStatus("ready");
+      })
       .catch((error: unknown) => {
-        if ((error as Error).name !== "AbortError")
+        if ((error as Error).name !== "AbortError") {
           setConceptDetails(undefined);
+          setSourceStatus("unavailable");
+        }
       });
 
     return () => controller.abort();
@@ -747,6 +795,7 @@ export default function Page() {
       },
     ]);
     setSelectedId(id);
+    setIsRepositioning(false);
   }
   return (
     <main className="app-shell">
@@ -891,17 +940,17 @@ export default function Page() {
           <header className="workspace-header">
             <div>
               <p className="eyebrow">Step 2 of 3 · Review highlights</p>
-              <h1>Does this look right?</h1>
+              <h1>Review and refine your highlights.</h1>
               <p>
-                Select a highlight to correct its typed text, move it, or add
-                another.
+                Pick a phrase, correct the label if needed, then save your
+                interactive PDF.
               </p>
             </div>
             <button
               className="primary-button"
               onClick={() => setScreen("trace")}
             >
-              Publish interactive PDF <span>→</span>
+              Save &amp; open PDF <span>→</span>
             </button>
           </header>
           <div className="editor-grid">
@@ -911,14 +960,30 @@ export default function Page() {
                   <b>{regions.length}</b> highlights found
                 </span>
                 <button onClick={addRegion}>＋ Add highlight</button>
-                <span className="canvas-hint">Drag highlights to refine</span>
+                <button
+                  className={
+                    isRepositioning ? "move-button active" : "move-button"
+                  }
+                  onClick={() => setIsRepositioning((current) => !current)}
+                >
+                  {isRepositioning ? "Done moving" : "Move selected"}
+                </button>
+                <span className="canvas-hint">
+                  {isRepositioning
+                    ? "Drag the selected outline on the page"
+                    : "Select a phrase to edit it"}
+                </span>
               </div>
               <NotebookPreview
                 imageUrl={imageUrl}
                 regions={regions}
                 selected={selectedId}
-                onSelect={setSelectedId}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  setIsRepositioning(false);
+                }}
                 editable
+                allowDragging={isRepositioning}
                 onRegionChange={(changed) =>
                   setRegions((current) =>
                     current.map((region) =>
@@ -929,7 +994,26 @@ export default function Page() {
               />
             </div>
             <aside className="inspector">
-              <p className="eyebrow">Selected highlight</p>
+              <p className="eyebrow">1. Choose a highlight</p>
+              <div className="highlight-picker" role="list">
+                {regions.map((region, index) => (
+                  <button
+                    key={region.id}
+                    type="button"
+                    role="listitem"
+                    className={region.id === selected.id ? "active" : ""}
+                    onClick={() => {
+                      setSelectedId(region.id);
+                      setIsRepositioning(false);
+                    }}
+                  >
+                    <span>{index + 1}</span>
+                    {region.label || "Untitled highlight"}
+                  </button>
+                ))}
+              </div>
+              <div className="inspector-divider" />
+              <p className="eyebrow">2. Edit the selected phrase</p>
               <label>
                 Typed text
                 <input
@@ -968,7 +1052,7 @@ export default function Page() {
                 </select>
               </label>
               <div className="marker-row">
-                <span>Study marker</span>
+                <span>Optional study marker</span>
                 <button
                   className={
                     selected.marker === "star" ? "marker active" : "marker"
@@ -987,7 +1071,7 @@ export default function Page() {
                     )
                   }
                 >
-                  ★ Important
+                  ★ Mark important
                 </button>
                 <button
                   className={
@@ -1009,11 +1093,18 @@ export default function Page() {
                     )
                   }
                 >
-                  ? Ask later
+                  ? Review later
                 </button>
               </div>
-              <div className="confidence">
-                <span>Text detection confidence</span>
+              <p className="editor-help">
+                Need a different position? Select <b>Move selected</b>, then
+                drag the outline on the notebook.
+              </p>
+              <div
+                className="confidence"
+                aria-label="AI text detection confidence"
+              >
+                <span>AI confidence</span>
                 <strong>{selected.confidence}%</strong>
                 <div>
                   <i style={{ width: `${selected.confidence}%` }} />
@@ -1021,6 +1112,7 @@ export default function Page() {
               </div>
               <button
                 className="text-button danger"
+                disabled={regions.length === 1}
                 onClick={() => {
                   setRegions((current) =>
                     current.filter((region) => region.id !== selected.id),
@@ -1031,7 +1123,9 @@ export default function Page() {
                   );
                 }}
               >
-                Remove highlight
+                {regions.length === 1
+                  ? "Keep at least one highlight"
+                  : "Remove highlight"}
               </button>
             </aside>
           </div>
@@ -1112,7 +1206,7 @@ export default function Page() {
                 </button>
               </div>
             ) : null}
-            <aside className="concept-detail">
+            <aside key={selected.id} className="concept-detail">
               <p className="eyebrow">About this highlight</p>
               <div className="concept-title">
                 <span>
@@ -1137,7 +1231,10 @@ export default function Page() {
                 </p>
               </div>
               <div className="reference-list">
-                <p className="detail-label">Useful links</p>
+                <div className="reference-heading">
+                  <p className="detail-label">Useful links</p>
+                  {sourceStatus === "loading" ? <span>Updating…</span> : null}
+                </div>
                 {visibleSources.map((source) => (
                   <a
                     key={source.url}
@@ -1148,8 +1245,14 @@ export default function Page() {
                     <span>↗</span> {source.title}
                   </a>
                 ))}
-                {!visibleSources.length ? (
-                  <p className="reference-loading">Loading approved sources…</p>
+                {!visibleSources.length && sourceStatus === "loading" ? (
+                  <p className="reference-loading">Finding approved sources…</p>
+                ) : null}
+                {!visibleSources.length && sourceStatus === "unavailable" ? (
+                  <p className="reference-loading">
+                    Links are temporarily unavailable. Try another highlight or
+                    keep studying from the extracted text.
+                  </p>
                 ) : null}
               </div>
             </aside>
