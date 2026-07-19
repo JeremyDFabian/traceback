@@ -1,4 +1,5 @@
 import base64
+import json
 from dataclasses import dataclass
 
 from openai import OpenAI, OpenAIError
@@ -12,7 +13,9 @@ Analyze this single photographed notebook page for an interactive study surface.
 Return only the requested structured result.
 
 Rules:
-- Transcribe only clearly visible handwritten or printed text.
+- Produce clean typed_text from only clearly visible handwritten or printed text.
+- Use the supplied OCR/layout regions as the primary evidence for transcription and
+  bounding boxes. Correct them only when the image makes the correction unambiguous.
 - Every region label must be the actual short concept from the note transcription.
 - Use only these region types: concept, definition, question, example, or other.
 - Never use generic labels such as Heading, Subheading, Content, Notes, List, or Definition.
@@ -23,6 +26,9 @@ Rules:
 - Detect star and question markers only when clearly visible.
 - Use low confidence and an uncertainty note when unsure.
 - Include a short page summary.
+- Give every region one student-friendly sentence in explanation.
+- Give every region two or three concise trusted_source_queries. They must be plain
+  search phrases, never URLs, domains, citations, or source names.
 - Prefer empty regions, relationships, or markers over invented information.
 """.strip()
 
@@ -36,6 +42,7 @@ class OpenAIAnalysis:
 def analyze_notebook_with_openai(
     image_bytes: bytes,
     settings: Settings,
+    ocr_regions: list[NotebookRegion] | None = None,
 ) -> OpenAIAnalysis:
     api_key = settings.openai_api_key
     if api_key is None or not api_key.get_secret_value().strip():
@@ -51,7 +58,14 @@ def analyze_notebook_with_openai(
                 {
                     "role": "user",
                     "content": [
-                        {"type": "input_text", "text": "Analyze this notebook image."},
+                        {
+                            "type": "input_text",
+                            "text": (
+                                "Analyze this notebook image using these OCR/layout regions as "
+                                "grounding data. Return the requested structured result.\n\n"
+                                f"OCR/layout regions:\n{serialize_ocr_regions(ocr_regions or [])}"
+                            ),
+                        },
                         {
                             "type": "input_image",
                             "image_url": image_data_url,
@@ -75,6 +89,21 @@ def analyze_notebook_with_openai(
     return OpenAIAnalysis(
         result=replace_generic_region_labels(result),
         warnings=["openai_vision_analysis_used"],
+    )
+
+
+def serialize_ocr_regions(regions: list[NotebookRegion]) -> str:
+    """Give the model bounded OCR/layout evidence without any user-supplied URLs."""
+    return json.dumps(
+        [
+            {
+                "text": region.transcription,
+                "bbox": region.bbox.model_dump(),
+                "confidence": region.confidence,
+            }
+            for region in regions
+        ],
+        ensure_ascii=False,
     )
 
 

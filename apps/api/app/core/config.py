@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3-flash-preview"
     openai_api_key: SecretStr | None = None
-    openai_vision_model: str = "gpt-4o-mini"
+    openai_vision_model: str = "gpt-5.6-terra"
     ocr_engine: Literal["mock", "easyocr", "paddleocr"] = "mock"
 
     model_config = SettingsConfigDict(

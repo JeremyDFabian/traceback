@@ -313,10 +313,14 @@ export interface components {
     };
     /** ConceptDetailsRequest */
     ConceptDetailsRequest: {
+      /** Explanation */
+      explanation?: string | null;
       /** Label */
       label: string;
       /** Transcription */
       transcription?: string | null;
+      /** Trusted Source Queries */
+      trusted_source_queries?: string[];
     };
     /** ConceptDetailsResult */
     ConceptDetailsResult: {
@@ -590,6 +594,11 @@ export interface components {
       regions?: components["schemas"]["NotebookRegion"][];
       /** Relationships */
       relationships?: components["schemas"]["NotebookRelationship"][];
+      /**
+       * Typed Text
+       * @default
+       */
+      typed_text?: string;
       /** Warnings */
       warnings?: string[];
     };
@@ -615,6 +624,11 @@ export interface components {
       bbox: components["schemas"]["BoundingBox"];
       /** Confidence */
       confidence: number;
+      /**
+       * Explanation
+       * @default
+       */
+      explanation?: string;
       /** Id */
       id: string;
       /** Label */
@@ -623,6 +637,8 @@ export interface components {
       markers?: ("star" | "question" | "highlight" | "circle")[];
       /** Transcription */
       transcription: string;
+      /** Trusted Source Queries */
+      trusted_source_queries?: string[];
       /**
        * Type
        * @enum {string}

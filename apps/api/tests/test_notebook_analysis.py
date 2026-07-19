@@ -82,6 +82,7 @@ def test_notebook_analysis_returns_overlay_contract() -> None:
     payload = response.json()
     assert set(payload) == {
         "page_summary",
+        "typed_text",
         "regions",
         "relationships",
         "markers",
@@ -98,6 +99,7 @@ def test_notebook_analysis_returns_overlay_contract() -> None:
     assert payload["relationships"][0]["source_region_id"] == "region_1"
     assert payload["relationships"][0]["target_region_id"] == "region_2"
     assert payload["markers"] == []
+    assert payload["typed_text"] == "Mitochondria produce ATP during cellular respiration."
 
 
 def test_notebook_analysis_returns_no_markers_for_blank_base64_image() -> None:

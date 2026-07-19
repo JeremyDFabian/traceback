@@ -30,11 +30,21 @@ async def analyze_notebook_page(
 ) -> NotebookAnalysisResult:
     """Analyze notebook input and return overlay-ready structured data."""
     active_settings = settings or get_settings()
-    processed_image = preprocess_request_image(
-        request,
-        include_local_analysis=not active_settings.remote_vision_enabled,
-    )
+    processed_image = preprocess_request_image(request)
     warnings = list(processed_image.warnings) if processed_image is not None else []
+
+    ocr_regions: list[NotebookRegion] = []
+    analysis_image = None
+    if processed_image is not None:
+        analysis_image = get_analysis_image_array(processed_image)
+
+    if active_settings.ocr_analysis_enabled:
+        if processed_image is None or analysis_image is None:
+            warnings.append("ocr_requires_image_base64_using_fallback_json")
+        else:
+            ocr_analysis = analyze_regions_with_ocr(analysis_image, active_settings)
+            ocr_regions = ocr_analysis.regions
+            warnings.extend(ocr_analysis.warnings)
 
     if active_settings.openai_analysis_enabled:
         if processed_image is None:
@@ -43,6 +53,7 @@ async def analyze_notebook_page(
             openai_analysis = analyze_notebook_with_openai(
                 decode_base64_image(processed_image.gemini_image_base64),
                 active_settings,
+                ocr_regions,
             )
             warnings.extend(openai_analysis.warnings)
             if openai_analysis.result is not None:
@@ -67,43 +78,41 @@ async def analyze_notebook_page(
                     warnings,
                 )
 
+    if ocr_regions and analysis_image is not None:
+        detected_relationships = detect_arrow_relationships(
+            analysis_image,
+            ocr_regions,
+        )
+        return NotebookAnalysisResult(
+            page_summary="OCR notebook analysis result",
+            typed_text=typed_text_from_regions(ocr_regions),
+            regions=ocr_regions,
+            relationships=detected_relationships,
+            markers=detect_markers(analysis_image),
+            warnings=warnings,
+            confidence=average_region_confidence(ocr_regions),
+        )
+
     if active_settings.ocr_analysis_enabled:
-        if processed_image is None:
-            warnings.append("ocr_requires_image_base64_using_fallback_json")
-            return build_mock_analysis_result(warnings=warnings)
-
-        analysis_image = get_analysis_image_array(processed_image)
-        ocr_analysis = analyze_regions_with_ocr(analysis_image, active_settings)
-        warnings.extend(ocr_analysis.warnings)
-
-        if ocr_analysis.regions:
-            detected_relationships = detect_arrow_relationships(
-                analysis_image,
-                ocr_analysis.regions,
-            )
-            return NotebookAnalysisResult(
-                page_summary="OCR notebook analysis result",
-                regions=ocr_analysis.regions,
-                relationships=detected_relationships,
-                markers=detect_markers(analysis_image),
-                warnings=warnings,
-                confidence=average_region_confidence(ocr_analysis.regions),
-            )
-
         warnings.append("ocr_returned_no_regions_using_fallback_json")
 
     mock_result = build_mock_analysis_result(
         warnings=warnings,
         include_mock_relationships=processed_image is None,
     )
-    if processed_image is not None:
-        analysis_image = get_analysis_image_array(processed_image)
+    if processed_image is not None and analysis_image is not None:
         mock_result.relationships = detect_arrow_relationships(
             analysis_image,
             mock_result.regions,
         )
         mock_result.markers = detect_markers(analysis_image)
     return mock_result
+
+
+def typed_text_from_regions(regions: list[NotebookRegion]) -> str:
+    return "\n".join(
+        region.transcription.strip() for region in regions if region.transcription.strip()
+    )
 
 
 def finalize_remote_result(
@@ -116,9 +125,11 @@ def finalize_remote_result(
         analysis_image = get_analysis_image_array(processed_image)
         relationships = detect_arrow_relationships(analysis_image, result.regions)
 
+    typed_text = result.typed_text or typed_text_from_regions(result.regions)
     return clean_analysis_result(
         result.model_copy(
             update={
+                "typed_text": typed_text,
                 "relationships": relationships,
                 "markers": result.markers,
                 "warnings": [*warnings, *result.warnings],
@@ -176,6 +187,7 @@ def build_mock_analysis_result(
 
     return NotebookAnalysisResult(
         page_summary="Mock notebook analysis result",
+        typed_text="Mitochondria produce ATP during cellular respiration.",
         regions=[
             NotebookRegion(
                 id="region_1",

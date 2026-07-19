@@ -37,7 +37,17 @@ def get_concept_details(
     settings: Settings | None = None,
 ) -> ConceptDetailsResult:
     active_settings = settings or get_settings()
-    sources = build_search_sources(request.label)
+    sources = build_search_sources(request.label, request.trusted_source_queries)
+
+    if request.explanation:
+        return ConceptDetailsResult(
+            label=request.label,
+            definition=request.explanation,
+            key_points=[],
+            sources=sources,
+            confidence=1.0,
+            warnings=["precomputed_terra_explanation_used"],
+        )
 
     if active_settings.openai_analysis_enabled:
         analysis = analyze_concept_with_openai(request, active_settings)
@@ -141,16 +151,21 @@ def analyze_concept_with_gemini(
     return ConceptDetailsAnalysis(details=details, warnings=["gemini_concept_details_used"])
 
 
-def build_search_sources(label: str) -> list[ConceptSource]:
-    query = quote_plus(label)
+def build_search_sources(label: str, queries: list[str] | None = None) -> list[ConceptSource]:
+    query_text = next((query.strip() for query in queries or [] if query.strip()), label)
+    query = quote_plus(query_text)
     return [
+        ConceptSource(
+            title=f"Search OpenStax for {label}",
+            url=f"https://openstax.org/search?query={query}",
+        ),
+        ConceptSource(
+            title=f"Search Khan Academy for {label}",
+            url=f"https://www.khanacademy.org/search?page_search_query={query}",
+        ),
         ConceptSource(
             title=f"Search Wikipedia for {label}",
             url=f"https://en.wikipedia.org/w/index.php?search={query}",
-        ),
-        ConceptSource(
-            title=f"Search Google for {label}",
-            url=f"https://www.google.com/search?q={query}",
         ),
     ]
 

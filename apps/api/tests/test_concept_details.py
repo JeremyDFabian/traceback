@@ -31,7 +31,7 @@ def test_concept_details_endpoint_returns_contract() -> None:
 
     assert response.status_code == 200
     assert response.json()["label"] == "Mitochondria"
-    assert len(response.json()["sources"]) == 2
+    assert len(response.json()["sources"]) == 3
 
 
 def test_concept_details_uses_openai_search_fallback_without_api_key() -> None:
@@ -46,3 +46,26 @@ def test_concept_details_uses_openai_search_fallback_without_api_key() -> None:
 
     assert result.confidence == 0.0
     assert result.warnings == ["openai_api_key_missing_using_search_links"]
+
+
+def test_concept_details_uses_precomputed_terra_explanation_and_approved_sources() -> None:
+    result = get_concept_details(
+        ConceptDetailsRequest(
+            label="Mitochondria",
+            explanation="Mitochondria help cells produce usable energy.",
+            trusted_source_queries=["mitochondria cellular energy"],
+        ),
+        Settings(
+            database_url="postgresql://test:test@localhost:5432/traceback",
+            analysis_engine="local",
+        ),
+    )
+
+    assert result.definition == "Mitochondria help cells produce usable energy."
+    assert result.warnings == ["precomputed_terra_explanation_used"]
+    assert [source.title for source in result.sources] == [
+        "Search OpenStax for Mitochondria",
+        "Search Khan Academy for Mitochondria",
+        "Search Wikipedia for Mitochondria",
+    ]
+    assert all("mitochondria+cellular+energy" in source.url for source in result.sources)

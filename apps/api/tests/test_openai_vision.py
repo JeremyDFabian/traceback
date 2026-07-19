@@ -9,6 +9,7 @@ from app.schemas.notebook_analysis import (
 from app.services.notebook_analysis.openai import (
     analyze_notebook_with_openai,
     replace_generic_region_labels,
+    serialize_ocr_regions,
 )
 
 
@@ -44,3 +45,20 @@ def test_openai_replaces_generic_label_with_transcription() -> None:
     normalized = replace_generic_region_labels(result)
 
     assert normalized.regions[0].label == "Louis Pasteur"
+
+
+def test_openai_serializes_ocr_regions_as_bounded_layout_evidence() -> None:
+    region = NotebookRegion(
+        id="region_1",
+        label="ATP",
+        transcription="ATP stores energy.",
+        type="concept",
+        bbox=BoundingBox(x=0.1, y=0.2, width=0.3, height=0.1),
+        confidence=0.92,
+    )
+
+    serialized = serialize_ocr_regions([region])
+
+    assert "ATP stores energy." in serialized
+    assert '"x": 0.1' in serialized
+    assert "url" not in serialized.lower()

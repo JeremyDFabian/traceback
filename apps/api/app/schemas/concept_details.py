@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 class ConceptDetailsRequest(BaseModel):
     label: str = Field(min_length=1)
     transcription: str | None = None
+    explanation: str | None = None
+    trusted_source_queries: list[str] = Field(default_factory=list[str])
 
 
 class ConceptSource(BaseModel):

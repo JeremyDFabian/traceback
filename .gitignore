@@ -14,6 +14,8 @@ htmlcov/
 node_modules/
 *.py[cod]
 *.tsbuildinfo
+.pnpm-store/
+*.egg-info/
 
 # Local uploads and generated runtime data
 data/

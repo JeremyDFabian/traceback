@@ -29,6 +29,8 @@ class NotebookRegion(BaseModel):
         default_factory=list[Literal["star", "question", "highlight", "circle"]]
     )
     confidence: float = Field(ge=0.0, le=1.0)
+    explanation: str = ""
+    trusted_source_queries: list[str] = Field(default_factory=list[str])
     uncertainty_note: str | None = None
 
 
@@ -50,6 +52,7 @@ class NotebookAnalysisRequest(BaseModel):
 
 class NotebookAnalysisResult(BaseModel):
     page_summary: str = "Notebook analysis"
+    typed_text: str = ""
     regions: list[NotebookRegion] = Field(default_factory=list[NotebookRegion])
     relationships: list[NotebookRelationship] = Field(default_factory=list[NotebookRelationship])
     markers: list[NotebookMarker] = Field(default_factory=list[NotebookMarker])

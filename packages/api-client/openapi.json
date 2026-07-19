@@ -83,6 +83,17 @@
       },
       "ConceptDetailsRequest": {
         "properties": {
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
           "label": {
             "minLength": 1,
             "title": "Label",
@@ -98,6 +109,13 @@
               }
             ],
             "title": "Transcription"
+          },
+          "trusted_source_queries": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Trusted Source Queries",
+            "type": "array"
           }
         },
         "required": ["label"],
@@ -798,6 +816,11 @@
             "title": "Relationships",
             "type": "array"
           },
+          "typed_text": {
+            "default": "",
+            "title": "Typed Text",
+            "type": "string"
+          },
           "warnings": {
             "items": {
               "type": "string"
@@ -875,6 +898,11 @@
             "title": "Confidence",
             "type": "number"
           },
+          "explanation": {
+            "default": "",
+            "title": "Explanation",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -894,6 +922,13 @@
           "transcription": {
             "title": "Transcription",
             "type": "string"
+          },
+          "trusted_source_queries": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Trusted Source Queries",
+            "type": "array"
           },
           "type": {
             "enum": ["concept", "definition", "question", "example", "other"],

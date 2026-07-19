@@ -13,9 +13,59 @@ type Region = {
   height: number;
   marker?: Marker;
   confidence: number;
+  transcription?: string;
+  explanation?: string;
+  trustedSourceQueries?: string[];
+};
+
+type ApiNotebookRegion = {
+  id: string;
+  label: string;
+  transcription: string;
+  type: "concept" | "definition" | "question" | "example" | "other";
+  bbox: { x: number; y: number; width: number; height: number };
+  markers: Array<"star" | "question" | "highlight" | "circle">;
+  confidence: number;
+  explanation: string;
+  trusted_source_queries: string[];
+};
+
+type ApiNotebookAnalysis = {
+  page_summary: string;
+  typed_text: string;
+  regions: ApiNotebookRegion[];
+};
+
+type PageAnalysis = {
+  pageSummary: string;
+  typedText: string;
+  regions: Region[];
+};
+
+type ConceptDetails = {
+  definition: string;
+  sources: Array<{ title: string; url: string }>;
 };
 
 type Screen = "setup" | "processing" | "editor" | "trace" | "cards";
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const demoTypedText =
+  "Cells make usable energy through cellular respiration. This process uses mitochondria to help produce ATP, the energy cells can use for work.";
+const demoSources = [
+  {
+    title: "Cellular respiration · Wikipedia",
+    url: "https://en.wikipedia.org/wiki/Cellular_respiration",
+  },
+  {
+    title: "Energy and metabolism · OpenStax",
+    url: "https://openstax.org/books/biology-2e/pages/7-introduction",
+  },
+  {
+    title: "Cellular respiration · Khan Academy",
+    url: "https://www.khanacademy.org/science/biology/cellular-respiration-and-fermentation",
+  },
+];
 
 const seededRegions: Region[] = [
   {
@@ -244,6 +294,115 @@ function NotebookPreview({
   );
 }
 
+function InteractiveNotebookText({
+  text,
+  regions,
+  selectedId,
+  onSelect,
+}: {
+  text: string;
+  regions: Region[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const interactiveRegions = regions.filter((region) => region.label.trim());
+  if (!interactiveRegions.length) return <p>{text}</p>;
+
+  const escapedLabels = interactiveRegions
+    .map((region) => region.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .sort((first, second) => second.length - first.length);
+  const segments = text.split(new RegExp(`(${escapedLabels.join("|")})`, "gi"));
+
+  return (
+    <p>
+      {segments.map((segment, index) => {
+        const region = interactiveRegions.find(
+          (candidate) =>
+            candidate.label.trim().toLocaleLowerCase() ===
+            segment.trim().toLocaleLowerCase(),
+        );
+        if (!region) return <span key={`${segment}-${index}`}>{segment}</span>;
+
+        return (
+          <button
+            key={region.id}
+            type="button"
+            className={`pdf-highlight ${selectedId === region.id ? "selected" : ""}`}
+            onPointerEnter={() => onSelect(region.id)}
+            onFocus={() => onSelect(region.id)}
+            onClick={() => onSelect(region.id)}
+          >
+            {segment}
+          </button>
+        );
+      })}
+    </p>
+  );
+}
+
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () =>
+      reject(new Error("Unable to read this notebook photo."));
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Unable to prepare this notebook photo."));
+        return;
+      }
+      resolve(result.split(",")[1] ?? result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function normalizeRegion(region: ApiNotebookRegion): Region {
+  const marker = region.markers.includes("star")
+    ? "star"
+    : region.markers.includes("question")
+      ? "question"
+      : undefined;
+  const type =
+    region.type === "definition" || region.type === "question"
+      ? region.type
+      : "concept";
+
+  return {
+    id: region.id,
+    label: region.label,
+    type,
+    x: region.bbox.x * 100,
+    y: region.bbox.y * 100,
+    width: region.bbox.width * 100,
+    height: region.bbox.height * 100,
+    marker,
+    confidence: Math.round(region.confidence * 100),
+    transcription: region.transcription,
+    explanation: region.explanation,
+    trustedSourceQueries: region.trusted_source_queries,
+  };
+}
+
+async function analyzeNotebook(file: File): Promise<PageAnalysis> {
+  const imageBase64 = await fileToBase64(file);
+  const response = await fetch(`${apiBaseUrl}/api/notebook-analysis`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_base64: imageBase64 }),
+  });
+  if (!response.ok) {
+    throw new Error("Traceback could not analyze that notebook page.");
+  }
+
+  const analysis = (await response.json()) as ApiNotebookAnalysis;
+  return {
+    pageSummary: analysis.page_summary,
+    typedText: analysis.typed_text,
+    regions: analysis.regions.map(normalizeRegion),
+  };
+}
+
 function WhatIsTraceback() {
   const sectionRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -425,10 +584,18 @@ export default function Page() {
   const [regions, setRegions] = useState(seededRegions);
   const [selectedId, setSelectedId] = useState("mitochondria");
   const [approved, setApproved] = useState<string[]>([]);
+  const [pageAnalyses, setPageAnalyses] = useState<PageAnalysis[]>([]);
+  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [isLiveAnalysis, setIsLiveAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string>();
+  const [conceptDetails, setConceptDetails] = useState<ConceptDetails>();
   const selected = useMemo(
     () => regions.find((region) => region.id === selectedId) ?? regions[0],
     [regions, selectedId],
   );
+  const activeAnalysis = pageAnalyses[activePageIndex];
+  const visibleSources =
+    conceptDetails?.sources ?? (selected?.explanation ? [] : demoSources);
 
   useEffect(
     () => () => {
@@ -437,7 +604,7 @@ export default function Page() {
     [imageUrl],
   );
   useEffect(() => {
-    if (screen !== "processing") return;
+    if (screen !== "processing" || isLiveAnalysis) return;
     const timer = window.setInterval(
       () =>
         setStage((current) => {
@@ -451,7 +618,37 @@ export default function Page() {
       800,
     );
     return () => window.clearInterval(timer);
-  }, [screen]);
+  }, [isLiveAnalysis, screen]);
+  useEffect(() => {
+    if (screen !== "trace" || !selected?.explanation) {
+      setConceptDetails(undefined);
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetch(`${apiBaseUrl}/api/concept-details`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        label: selected.label,
+        transcription: selected.transcription,
+        explanation: selected.explanation,
+        trusted_source_queries: selected.trustedSourceQueries ?? [],
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to retrieve sources.");
+        return (await response.json()) as ConceptDetails;
+      })
+      .then((details) => setConceptDetails(details))
+      .catch((error: unknown) => {
+        if ((error as Error).name !== "AbortError")
+          setConceptDetails(undefined);
+      });
+
+    return () => controller.abort();
+  }, [screen, selected]);
 
   function selectNotebook(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -470,8 +667,59 @@ export default function Page() {
     setImageUrl(undefined);
   }
   function beginAnalysis() {
+    setAnalysisError(undefined);
     setStage(0);
+
+    if (notebooks.length) {
+      void analyzeNotebookPages();
+      return;
+    }
+
+    setIsLiveAnalysis(false);
+    setPageAnalyses([]);
+    setActivePageIndex(0);
+    setRegions(seededRegions);
+    setSelectedId(seededRegions[0].id);
     setScreen("processing");
+  }
+  async function analyzeNotebookPages() {
+    setStage(0);
+    setIsLiveAnalysis(true);
+    setScreen("processing");
+
+    try {
+      const analyses: PageAnalysis[] = [];
+      for (const file of notebooks) {
+        analyses.push(await analyzeNotebook(file));
+        setStage((current) => Math.min(stages.length - 1, current + 1));
+      }
+
+      const firstPage = analyses[0];
+      if (!firstPage?.regions.length) {
+        throw new Error("No readable study phrases were found in those pages.");
+      }
+      setPageAnalyses(analyses);
+      setActivePageIndex(0);
+      setRegions(firstPage.regions);
+      setSelectedId(firstPage.regions[0].id);
+      setScreen("trace");
+    } catch (error) {
+      setAnalysisError(
+        error instanceof Error
+          ? error.message
+          : "Traceback could not analyze those notebook pages.",
+      );
+      setScreen("setup");
+    } finally {
+      setIsLiveAnalysis(false);
+    }
+  }
+  function showPage(index: number) {
+    const nextPage = pageAnalyses[index];
+    if (!nextPage?.regions.length) return;
+    setActivePageIndex(index);
+    setRegions(nextPage.regions);
+    setSelectedId(nextPage.regions[0].id);
   }
   function navigateTo(sectionId: "what-it-is" | "how-it-works") {
     setScreen("setup");
@@ -588,6 +836,11 @@ export default function Page() {
                     Clear all
                   </button>
                 </div>
+              ) : null}
+              {analysisError ? (
+                <p className="analysis-error" role="alert">
+                  {analysisError} Check that the API is running, then try again.
+                </p>
               ) : null}
               <button
                 className="primary-button"
@@ -814,44 +1067,20 @@ export default function Page() {
             >
               <header>
                 <span>TRACEBACK PDF</span>
-                <span>Page 1 of {Math.max(notebooks.length, 1)}</span>
+                <span>
+                  Page {activePageIndex + 1} of{" "}
+                  {Math.max(pageAnalyses.length, 1)}
+                </span>
               </header>
               <div className="pdf-page-content">
                 <p className="pdf-kicker">EXTRACTED FROM YOUR NOTEBOOK</p>
-                <h2>Cellular respiration</h2>
-                <p>
-                  Cells make usable energy through{" "}
-                  <button
-                    type="button"
-                    className={`pdf-highlight ${selectedId === "respiration" ? "selected" : ""}`}
-                    onPointerEnter={() => setSelectedId("respiration")}
-                    onFocus={() => setSelectedId("respiration")}
-                    onClick={() => setSelectedId("respiration")}
-                  >
-                    cellular respiration
-                  </button>
-                  . This process uses{" "}
-                  <button
-                    type="button"
-                    className={`pdf-highlight ${selectedId === "mitochondria" ? "selected" : ""}`}
-                    onPointerEnter={() => setSelectedId("mitochondria")}
-                    onFocus={() => setSelectedId("mitochondria")}
-                    onClick={() => setSelectedId("mitochondria")}
-                  >
-                    mitochondria
-                  </button>{" "}
-                  to help produce{" "}
-                  <button
-                    type="button"
-                    className={`pdf-highlight ${selectedId === "atp" ? "selected" : ""}`}
-                    onPointerEnter={() => setSelectedId("atp")}
-                    onFocus={() => setSelectedId("atp")}
-                    onClick={() => setSelectedId("atp")}
-                  >
-                    ATP
-                  </button>
-                  , the energy cells can use for work.
-                </p>
+                <h2>{activeAnalysis?.pageSummary ?? "Cellular respiration"}</h2>
+                <InteractiveNotebookText
+                  text={activeAnalysis?.typedText || demoTypedText}
+                  regions={regions}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
                 <p>
                   Hover over any highlighted topic to open a short explanation
                   and trusted places to learn more.
@@ -862,6 +1091,27 @@ export default function Page() {
                 <span>{regions.length} topics found</span>
               </footer>
             </section>
+            {pageAnalyses.length > 1 ? (
+              <div className="pdf-page-navigation" aria-label="Notebook pages">
+                <button
+                  type="button"
+                  disabled={activePageIndex === 0}
+                  onClick={() => showPage(activePageIndex - 1)}
+                >
+                  ← Previous page
+                </button>
+                <span>
+                  Page {activePageIndex + 1} / {pageAnalyses.length}
+                </span>
+                <button
+                  type="button"
+                  disabled={activePageIndex === pageAnalyses.length - 1}
+                  onClick={() => showPage(activePageIndex + 1)}
+                >
+                  Next page →
+                </button>
+              </div>
+            ) : null}
             <aside className="concept-detail">
               <p className="eyebrow">About this highlight</p>
               <div className="concept-title">
@@ -876,39 +1126,31 @@ export default function Page() {
               </div>
               <div className="transcription">
                 <small>EXTRACTED TEXT</small>
-                <p>{selected.label}</p>
+                <p>{selected.transcription ?? selected.label}</p>
               </div>
               <div className="study-note">
                 <p className="detail-label">Quick explanation</p>
                 <p>
-                  <b>{selected.label}</b> is a key topic in how cells convert
-                  food into usable energy. Use this short context to reconnect
-                  the phrase to the rest of your notes.
+                  {conceptDetails?.definition ??
+                    selected.explanation ??
+                    `${selected.label} is a key idea in this notebook page.`}
                 </p>
               </div>
               <div className="reference-list">
                 <p className="detail-label">Useful links</p>
-                <a
-                  href="https://en.wikipedia.org/wiki/Cellular_respiration"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span>↗</span> Cellular respiration · Wikipedia
-                </a>
-                <a
-                  href="https://openstax.org/books/biology-2e/pages/7-introduction"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span>↗</span> Energy and metabolism · OpenStax
-                </a>
-                <a
-                  href="https://www.khanacademy.org/science/biology/cellular-respiration-and-fermentation"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span>↗</span> Cellular respiration · Khan Academy
-                </a>
+                {visibleSources.map((source) => (
+                  <a
+                    key={source.url}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <span>↗</span> {source.title}
+                  </a>
+                ))}
+                {!visibleSources.length ? (
+                  <p className="reference-loading">Loading approved sources…</p>
+                ) : null}
               </div>
             </aside>
           </div>

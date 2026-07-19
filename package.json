@@ -7,7 +7,9 @@
   },
   "scripts": {
     "build": "corepack pnpm --recursive --if-present build",
-    "dev": "corepack pnpm --parallel --recursive --if-present dev",
+    "dev": "scripts\\dev.cmd",
+    "dev:web": "corepack pnpm --filter @traceback/web dev",
+    "dev:api": "scripts\\dev.cmd --api-only",
     "format": "corepack pnpm --recursive --if-present format",
     "format:check": "corepack pnpm --recursive --if-present format:check",
     "lint": "corepack pnpm --recursive --if-present lint",

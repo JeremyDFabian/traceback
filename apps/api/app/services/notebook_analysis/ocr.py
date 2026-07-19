@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib import import_module
+from pathlib import Path
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -87,6 +88,8 @@ def analyze_with_paddleocr(image_array: np.ndarray) -> OCRAnalysis:
 @lru_cache
 def get_paddleocr_reader() -> Any:
     os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "False")
+    cache_dir = Path(__file__).resolve().parents[5] / ".data" / "paddlex"
+    os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str(cache_dir))
 
     module = import_module("paddleocr")
     paddle_ocr_class = getattr(module, "PaddleOCR")

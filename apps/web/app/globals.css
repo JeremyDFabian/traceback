@@ -3615,6 +3615,9 @@ body {
 .interactive-pdf-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-areas:
+    "page detail"
+    "navigation detail";
   gap: 22px;
   align-items: stretch;
 }
@@ -3626,6 +3629,7 @@ body {
   box-shadow: 0 18px 46px #4a2e2715;
 }
 .interactive-pdf-page {
+  grid-area: page;
   display: flex;
   min-height: 640px;
   flex-direction: column;
@@ -3640,6 +3644,32 @@ body {
   box-shadow:
     inset 42px 0 #f3d5cc66,
     0 18px 46px #4a2e2715;
+}
+.pdf-page-navigation {
+  grid-area: navigation;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 0 4px;
+  color: #746d65;
+  font-size: 11px;
+  font-weight: 750;
+}
+.pdf-page-navigation button {
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+  color: #53655b;
+  font: inherit;
+  cursor: pointer;
+}
+.pdf-page-navigation button:disabled {
+  color: #a69d92;
+  cursor: default;
+}
+.interactive-pdf-layout .concept-detail {
+  grid-area: detail;
 }
 .interactive-pdf-page > header,
 .interactive-pdf-page > footer {
@@ -3785,6 +3815,10 @@ body {
 @media (max-width: 980px) {
   .interactive-pdf-layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "page"
+      "navigation"
+      "detail";
   }
   .interactive-pdf-page {
     min-height: 570px;
@@ -3994,6 +4028,16 @@ body {
 .upload-selection-summary button:hover,
 .upload-selection-summary button:focus-visible {
   color: #3f4d45;
+}
+.analysis-error {
+  margin: 10px 0 0;
+  padding: 9px 10px;
+  border: 1px solid #8e3d342f;
+  border-radius: 9px;
+  background: #f3d5cc70;
+  color: #733c34;
+  font-size: 10px;
+  line-height: 1.45;
 }
 @media (max-width: 1000px) {
   .session-status {
