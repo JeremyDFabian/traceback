@@ -59,6 +59,7 @@ def make_arrow_relationship_image() -> str:
     draw.polygon([(132, 68), (118, 59), (118, 77)], fill="black")
     return encode_image(image)
 
+
 def test_notebook_analysis_returns_overlay_contract() -> None:
     response = TestClient(app).post(
         "/api/notebook-analysis",
@@ -137,7 +138,6 @@ def test_notebook_analysis_returns_star_marker_candidate() -> None:
     assert all(marker["confidence"] <= 0.65 for marker in markers)
 
 
-
 def test_notebook_analysis_returns_arrow_relationship_candidate() -> None:
     response = TestClient(app).post(
         "/api/notebook-analysis",
@@ -161,6 +161,7 @@ def test_notebook_analysis_returns_arrow_relationship_candidate() -> None:
             "uncertainty_note": "Heuristic OpenCV arrow detection; user confirmation required.",
         }
     ]
+
 
 def test_notebook_analysis_preprocesses_base64_image_in_mock_mode() -> None:
     response = TestClient(app).post(
@@ -201,7 +202,10 @@ def test_notebook_analysis_uses_ocr_when_enabled(monkeypatch) -> None:
     result = anyio.run(
         analyzer.analyze_notebook_page,
         NotebookAnalysisRequest(image_base64=make_base64_test_image()),
-        Settings(ocr_engine="easyocr"),
+        Settings(
+            database_url="postgresql://test:test@localhost:5432/traceback",
+            ocr_engine="easyocr",
+        ),
     )
 
     assert result.page_summary == "OCR notebook analysis result"
@@ -219,7 +223,10 @@ def test_notebook_analysis_falls_back_when_ocr_has_no_regions(monkeypatch) -> No
     result = anyio.run(
         analyzer.analyze_notebook_page,
         NotebookAnalysisRequest(image_base64=make_base64_test_image()),
-        Settings(ocr_engine="easyocr"),
+        Settings(
+            database_url="postgresql://test:test@localhost:5432/traceback",
+            ocr_engine="easyocr",
+        ),
     )
 
     assert result.page_summary == "Mock notebook analysis result"
@@ -272,7 +279,3 @@ def test_notebook_analysis_requires_image_input() -> None:
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Provide either image_base64 or image_url."}
-
-
-
-
