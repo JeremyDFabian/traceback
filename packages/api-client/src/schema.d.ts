@@ -484,6 +484,8 @@ export interface components {
     };
     /** MatchResponse */
     MatchResponse: {
+      /** Highlight Boxes */
+      highlight_boxes: components["schemas"]["HighlightBox"][];
       /** Highlights */
       highlights: components["schemas"]["TextSpan"][];
       /** Passage */

@@ -4,7 +4,7 @@ from uuid import UUID
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.analysis import analysis_storage_key
+from app.api.analysis import confirmed_analysis_storage_key
 from app.core.config import get_settings
 from app.db import get_connection
 from app.pdf import extract_pdf
@@ -40,12 +40,12 @@ def match_session_region(
         analysis = AnalysisResult.model_validate(
             load_json(
                 settings.storage_dir,
-                analysis_storage_key(session_id),
+                confirmed_analysis_storage_key(session_id),
                 get_object_storage(settings),
             )
         )
     except FileNotFoundError as error:
-        raise HTTPException(status_code=404, detail="Analysis not found") from error
+        raise HTTPException(status_code=404, detail="Confirmed analysis not found") from error
 
     region = next((item for item in analysis.regions if item.id == region_id), None)
     if region is None:

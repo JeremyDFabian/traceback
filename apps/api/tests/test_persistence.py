@@ -88,6 +88,7 @@ def test_persist_match_writes_low_confidence_status() -> None:
         slide_number=2,
         passage="ATP",
         highlights=[],
+        highlight_boxes=[],
         similarity_score=0.15,
         reason="Low score",
     )

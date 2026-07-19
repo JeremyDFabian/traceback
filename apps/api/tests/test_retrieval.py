@@ -25,6 +25,14 @@ def test_match_region_returns_slide_and_highlight() -> None:
     assert result.status == "matched"
     assert result.slide_number == 3
     assert result.highlights[0].text == "Mitochondria produce ATP"
+    assert [box.model_dump() for box in result.highlight_boxes] == [
+        {
+            "x": 0.1,
+            "y": 0.3,
+            "width": 0.6,
+            "height": 0.12,
+        }
+    ]
 
 
 def test_match_region_returns_no_match_without_shared_terms() -> None:
@@ -36,3 +44,4 @@ def test_match_region_returns_no_match_without_shared_terms() -> None:
 
     assert result.status == "no_match"
     assert result.slide_number is None
+    assert result.highlight_boxes == []
