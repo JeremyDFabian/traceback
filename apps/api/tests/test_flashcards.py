@@ -109,6 +109,17 @@ def test_invalid_request_never_calls_generator(api_client: TestClient) -> None:
     assert generator.call_count == 0
 
 
+def test_invalid_request_precedes_missing_configuration(api_client: TestClient) -> None:
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        openai_api_key=None,
+        openai_text_model=None,
+    )
+
+    response = api_client.post("/api/flashcards/generate", json=valid_request_body(count=0))
+
+    assert response.status_code == 422
+
+
 def test_generation_failure_returns_safe_bad_gateway(api_client: TestClient) -> None:
     app.dependency_overrides[get_flashcard_generator] = lambda: FakeFlashcardGenerator(
         error=FlashcardGenerationError("private provider detail")

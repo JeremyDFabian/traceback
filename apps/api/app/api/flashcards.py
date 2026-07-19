@@ -28,6 +28,7 @@ def _build_openai_generator(api_key: str, model: str) -> OpenAIFlashcardGenerato
 
 
 def get_flashcard_generator(
+    request: GenerateFlashcardsRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> FlashcardGenerator:
     api_key = (
