@@ -1,4 +1,4 @@
-﻿from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from app.core.config import Settings
@@ -32,6 +32,7 @@ def test_concept_details_endpoint_returns_contract() -> None:
     assert response.status_code == 200
     assert response.json()["label"] == "Mitochondria"
     assert len(response.json()["sources"]) == 2
+
 
 def test_concept_details_uses_openai_search_fallback_without_api_key() -> None:
     result = get_concept_details(

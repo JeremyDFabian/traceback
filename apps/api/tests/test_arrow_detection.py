@@ -1,4 +1,4 @@
-﻿import cv2
+import cv2
 import numpy as np
 
 from app.schemas.notebook_analysis import BoundingBox, NotebookRegion

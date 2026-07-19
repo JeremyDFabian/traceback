@@ -160,7 +160,9 @@ def test_generation_failure_returns_safe_bad_gateway(api_client: TestClient) -> 
     assert "private provider detail" not in response.text
 
 
-def test_missing_configuration_returns_service_unavailable(api_client: TestClient) -> None:
+def test_missing_configuration_returns_service_unavailable(
+    api_client: TestClient,
+) -> None:
     app.dependency_overrides[get_settings] = lambda: Settings(
         openai_api_key=None,
         openai_text_model=None,
@@ -331,7 +333,8 @@ def test_generated_flashcard_accepts_required_difficulty(difficulty: str) -> Non
     ],
 )
 def test_contracts_forbid_unexpected_fields(
-    model: type[GenerateFlashcardsRequest] | type[GeneratedFlashcard], payload: dict[str, object]
+    model: type[GenerateFlashcardsRequest] | type[GeneratedFlashcard],
+    payload: dict[str, object],
 ) -> None:
     with pytest.raises(ValidationError):
         model(**payload)

@@ -1,6 +1,7 @@
 from app.schemas.notebook_analysis import (
     NotebookAnalysisResult,
     NotebookRegion,
+    NotebookRelationship,
 )
 
 
@@ -12,7 +13,7 @@ def clean_analysis_result(result: NotebookAnalysisResult) -> NotebookAnalysisRes
             retained_regions.append(region)
 
     region_ids = {region.id for region in retained_regions}
-    relationships = []
+    relationships: list[NotebookRelationship] = []
     seen_relationships: set[tuple[str, str, str | None]] = set()
     for relationship in result.relationships:
         relationship_key = (

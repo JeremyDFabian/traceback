@@ -1,7 +1,11 @@
-﻿from pydantic import SecretStr
+from pydantic import SecretStr
 
 from app.core.config import Settings
-from app.schemas.notebook_analysis import BoundingBox, NotebookAnalysisResult, NotebookRegion
+from app.schemas.notebook_analysis import (
+    BoundingBox,
+    NotebookAnalysisResult,
+    NotebookRegion,
+)
 from app.services.notebook_analysis.openai import (
     analyze_notebook_with_openai,
     replace_generic_region_labels,

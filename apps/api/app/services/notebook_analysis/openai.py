@@ -1,11 +1,11 @@
-﻿import base64
+import base64
 from dataclasses import dataclass
 
 from openai import OpenAI, OpenAIError
 from pydantic import ValidationError
 
 from app.core.config import Settings
-from app.schemas.notebook_analysis import NotebookAnalysisResult
+from app.schemas.notebook_analysis import NotebookAnalysisResult, NotebookRegion
 
 OPENAI_NOTEBOOK_ANALYSIS_PROMPT = """
 Analyze this single photographed notebook page for an interactive study surface.
@@ -52,7 +52,11 @@ def analyze_notebook_with_openai(
                     "role": "user",
                     "content": [
                         {"type": "input_text", "text": "Analyze this notebook image."},
-                        {"type": "input_image", "image_url": image_data_url, "detail": "high"},
+                        {
+                            "type": "input_image",
+                            "image_url": image_data_url,
+                            "detail": "high",
+                        },
                     ],
                 }
             ],
@@ -73,6 +77,7 @@ def analyze_notebook_with_openai(
         warnings=["openai_vision_analysis_used"],
     )
 
+
 GENERIC_REGION_LABELS = {
     "content",
     "definition",
@@ -83,8 +88,10 @@ GENERIC_REGION_LABELS = {
 }
 
 
-def replace_generic_region_labels(result: NotebookAnalysisResult) -> NotebookAnalysisResult:
-    regions = []
+def replace_generic_region_labels(
+    result: NotebookAnalysisResult,
+) -> NotebookAnalysisResult:
+    regions: list[NotebookRegion] = []
     for region in result.regions:
         if region.label.strip().casefold() in GENERIC_REGION_LABELS and region.transcription:
             label = " ".join(region.transcription.split())[:80]

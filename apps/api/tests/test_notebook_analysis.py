@@ -7,9 +7,17 @@ from PIL import Image, ImageDraw
 
 from app.core.config import Settings
 from app.main import app
-from app.schemas.notebook_analysis import BoundingBox, NotebookAnalysisRequest, NotebookRegion
+from app.schemas.notebook_analysis import (
+    BoundingBox,
+    NotebookAnalysisRequest,
+    NotebookRegion,
+)
 from app.services.notebook_analysis import analyzer
-from app.services.notebook_analysis.ocr import OCRAnalysis, OCRTextBlock, text_blocks_to_regions
+from app.services.notebook_analysis.ocr import (
+    OCRAnalysis,
+    OCRTextBlock,
+    text_blocks_to_regions,
+)
 
 
 def make_base64_test_image() -> str:

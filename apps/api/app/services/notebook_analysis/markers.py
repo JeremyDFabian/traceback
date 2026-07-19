@@ -1,3 +1,5 @@
+from typing import Literal
+
 import cv2
 import numpy as np
 
@@ -74,7 +76,7 @@ def threshold_dark_marks(grayscale: np.ndarray) -> np.ndarray:
 def classify_marker(
     aspect_ratio: float,
     contour_complexity: int,
-) -> str | None:
+) -> Literal["star", "question"] | None:
     if 0.6 <= aspect_ratio <= 1.4 and contour_complexity >= 10:
         return "star"
 
@@ -84,7 +86,10 @@ def classify_marker(
     return None
 
 
-def marker_confidence(marker_type: str, contour_complexity: int) -> float:
+def marker_confidence(
+    marker_type: Literal["star", "question"],
+    contour_complexity: int,
+) -> float:
     if marker_type == "star":
         return min(0.65, 0.35 + contour_complexity * 0.03)
 

@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+from typing import cast
 
 import cv2
 import numpy as np
@@ -31,13 +32,16 @@ def detect_arrow_relationships(
 
     grayscale = to_grayscale(image_array)
     edges = cv2.Canny(grayscale, 50, 150, apertureSize=3)
-    raw_lines = cv2.HoughLinesP(
-        edges,
-        rho=1,
-        theta=np.pi / 180,
-        threshold=35,
-        minLineLength=35,
-        maxLineGap=12,
+    raw_lines = cast(
+        np.ndarray | None,
+        cv2.HoughLinesP(
+            edges,
+            rho=1,
+            theta=np.pi / 180,
+            threshold=35,
+            minLineLength=35,
+            maxLineGap=12,
+        ),
     )
     if raw_lines is None:
         return []
@@ -107,7 +111,9 @@ def to_grayscale(image_array: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
 
 
-def orient_line_left_to_right(line: LineSegment) -> tuple[tuple[int, int], tuple[int, int]]:
+def orient_line_left_to_right(
+    line: LineSegment,
+) -> tuple[tuple[int, int], tuple[int, int]]:
     if line.x1 < line.x2:
         return (line.x1, line.y1), (line.x2, line.y2)
 
@@ -131,7 +137,9 @@ def nearest_region(
 
     return min(
         regions,
-        key=lambda region: point_to_region_center_distance(point, region, image_width, image_height),
+        key=lambda region: point_to_region_center_distance(
+            point, region, image_width, image_height
+        ),
     )
 
 

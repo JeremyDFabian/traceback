@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class ConceptDetailsRequest(BaseModel):
@@ -14,13 +14,13 @@ class ConceptSource(BaseModel):
 class ConceptDetailsResult(BaseModel):
     label: str
     definition: str
-    key_points: list[str] = Field(default_factory=list)
-    sources: list[ConceptSource] = Field(default_factory=list)
+    key_points: list[str] = Field(default_factory=list[str])
+    sources: list[ConceptSource] = Field(default_factory=list[ConceptSource])
     confidence: float = Field(ge=0.0, le=1.0)
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list[str])
 
 
 class GeneratedConceptDetails(BaseModel):
     definition: str
-    key_points: list[str] = Field(default_factory=list)
+    key_points: list[str] = Field(default_factory=list[str])
     confidence: float = Field(ge=0.0, le=1.0)

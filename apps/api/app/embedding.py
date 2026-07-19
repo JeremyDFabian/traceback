@@ -20,6 +20,7 @@ def cosine_similarity(left: Sequence[float], right: Sequence[float]) -> float:
     return max(
         0.0,
         min(
-            1.0, sum(a * b for a, b in zip(left, right, strict=True)) / (left_length * right_length)
+            1.0,
+            sum(a * b for a, b in zip(left, right, strict=True)) / (left_length * right_length),
         ),
     )

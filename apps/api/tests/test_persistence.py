@@ -95,7 +95,12 @@ def test_persist_match_writes_low_confidence_status() -> None:
 
     persist_match(connection, SESSION_ID, match)
 
-    assert connection.execute.call_args.args[1] == (SESSION_ID, "region_1", 0.15, "uncertain")
+    assert connection.execute.call_args.args[1] == (
+        SESSION_ID,
+        "region_1",
+        0.15,
+        "uncertain",
+    )
 
 
 def test_persist_flashcard_suggestions_replaces_session_projection() -> None:

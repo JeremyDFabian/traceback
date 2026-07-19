@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+  "/api/concept-details": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Concept Details */
+    post: operations["concept_details_api_concept_details_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/flashcards/generate": {
     parameters: {
       query?: never;
@@ -32,6 +49,23 @@ export interface paths {
     get: operations["health_api_health_get"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/notebook-analysis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Analyze Notebook Page Route */
+    post: operations["analyze_notebook_page_route_api_notebook_analysis_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -277,6 +311,35 @@ export interface components {
       /** Y */
       y: number;
     };
+    /** ConceptDetailsRequest */
+    ConceptDetailsRequest: {
+      /** Label */
+      label: string;
+      /** Transcription */
+      transcription?: string | null;
+    };
+    /** ConceptDetailsResult */
+    ConceptDetailsResult: {
+      /** Confidence */
+      confidence: number;
+      /** Definition */
+      definition: string;
+      /** Key Points */
+      key_points?: string[];
+      /** Label */
+      label: string;
+      /** Sources */
+      sources?: components["schemas"]["ConceptSource"][];
+      /** Warnings */
+      warnings?: string[];
+    };
+    /** ConceptSource */
+    ConceptSource: {
+      /** Title */
+      title: string;
+      /** Url */
+      url: string;
+    };
     /** DeckExtractionResponse */
     DeckExtractionResponse: {
       /** Session Id */
@@ -504,6 +567,91 @@ export interface components {
        */
       status: "matched" | "uncertain" | "no_match";
     };
+    /** NotebookAnalysisRequest */
+    NotebookAnalysisRequest: {
+      /** Image Base64 */
+      image_base64?: string | null;
+      /** Image Url */
+      image_url?: string | null;
+      manual_crop_bbox?: components["schemas"]["BoundingBox"] | null;
+    };
+    /** NotebookAnalysisResult */
+    NotebookAnalysisResult: {
+      /** Confidence */
+      confidence: number;
+      /** Markers */
+      markers?: components["schemas"]["NotebookMarker"][];
+      /**
+       * Page Summary
+       * @default Notebook analysis
+       */
+      page_summary?: string;
+      /** Regions */
+      regions?: components["schemas"]["NotebookRegion"][];
+      /** Relationships */
+      relationships?: components["schemas"]["NotebookRelationship"][];
+      /** Warnings */
+      warnings?: string[];
+    };
+    /** NotebookMarker */
+    NotebookMarker: {
+      bbox?: components["schemas"]["BoundingBox"] | null;
+      /** Confidence */
+      confidence: number;
+      /** Id */
+      id: string;
+      /** Region Id */
+      region_id?: string | null;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "star" | "question" | "highlight" | "circle";
+      /** Uncertainty Note */
+      uncertainty_note?: string | null;
+    };
+    /** NotebookRegion */
+    NotebookRegion: {
+      bbox: components["schemas"]["BoundingBox"];
+      /** Confidence */
+      confidence: number;
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /** Markers */
+      markers?: ("star" | "question" | "highlight" | "circle")[];
+      /** Transcription */
+      transcription: string;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "concept" | "definition" | "question" | "example" | "other";
+      /** Uncertainty Note */
+      uncertainty_note?: string | null;
+    };
+    /** NotebookRelationship */
+    NotebookRelationship: {
+      /** Confidence */
+      confidence: number;
+      /** Id */
+      id: string;
+      /** Label */
+      label?: string | null;
+      /** Source Region Id */
+      source_region_id: string;
+      /** Target Region Id */
+      target_region_id: string;
+      /**
+       * Type
+       * @default arrow
+       * @enum {string}
+       */
+      type?: "arrow" | "line" | "spatial" | "unknown";
+      /** Uncertainty Note */
+      uncertainty_note?: string | null;
+    };
     /** Region */
     Region: {
       bbox: components["schemas"]["BoundingBox"];
@@ -612,6 +760,39 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  concept_details_api_concept_details_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConceptDetailsRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConceptDetailsResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   generate_flashcards_api_flashcards_generate_post: {
     parameters: {
       query?: never;
@@ -661,6 +842,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  analyze_notebook_page_route_api_notebook_analysis_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NotebookAnalysisRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotebookAnalysisResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
