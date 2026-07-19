@@ -1191,10 +1191,161 @@ select:focus-visible {
   min-height: 100vh;
   padding: 19vh max(8vw, 24px);
   display: grid;
-  place-content: center;
+  align-content: center;
+  justify-items: center;
+  position: relative;
+  isolation: isolate;
   text-align: center;
   background: #fffdf4;
   overflow: hidden;
+}
+.what-is-content {
+  width: 84vw;
+  max-width: 1050px;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+.falling-papers {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.falling-paper {
+  position: absolute;
+  top: -230px;
+  width: clamp(112px, 11vw, 172px);
+  min-height: clamp(148px, 15vw, 218px);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #b9aa94;
+  border-radius: 2px;
+  color: #59463e;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 20px,
+      #d8cdbc 21px,
+      transparent 22px
+    ),
+    #fffdf5;
+  box-shadow: 6px 10px 18px #4a2e2720;
+  opacity: 0;
+  transform-origin: center;
+  will-change: transform, opacity;
+  animation: paper-fall var(--fall-duration)
+    cubic-bezier(0.43, 0.05, 0.82, 0.62) var(--fall-delay) infinite;
+}
+.falling-paper::after {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid #ffffffa6;
+  content: "";
+}
+.falling-paper small,
+.falling-paper b,
+.falling-paper em,
+.falling-paper i {
+  position: relative;
+  z-index: 1;
+}
+.falling-paper small {
+  color: #6f817a;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.falling-paper b {
+  font-family: Georgia, serif;
+  font-size: clamp(12px, 1.2vw, 17px);
+  font-weight: 400;
+  line-height: 1.1;
+}
+.falling-paper i {
+  height: 2px;
+  background: #80655b85;
+}
+.falling-paper i:nth-of-type(2) {
+  width: 78%;
+}
+.falling-paper em {
+  margin-top: auto;
+  color: #6c2730;
+  font-family: Georgia, serif;
+  font-size: clamp(10px, 1vw, 14px);
+}
+.paper-one {
+  left: 6%;
+  --fall-delay: -4.8s;
+  --fall-duration: 14.5s;
+  --paper-start: -13deg;
+  --paper-middle: 5deg;
+  --paper-sway: 2deg;
+  --paper-end: 18deg;
+  --paper-drift: 30px;
+  --paper-return-drift: -16px;
+}
+.paper-two {
+  left: 20%;
+  --fall-delay: -10.4s;
+  --fall-duration: 17s;
+  --paper-start: 12deg;
+  --paper-middle: -8deg;
+  --paper-sway: -4deg;
+  --paper-end: -19deg;
+  --paper-drift: -38px;
+  --paper-return-drift: 21px;
+}
+.paper-three {
+  right: 17%;
+  --fall-delay: -2.1s;
+  --fall-duration: 15.8s;
+  --paper-start: 16deg;
+  --paper-middle: -3deg;
+  --paper-sway: -1deg;
+  --paper-end: -15deg;
+  --paper-drift: 33px;
+  --paper-return-drift: -18px;
+}
+.paper-four {
+  right: 4%;
+  --fall-delay: -8.7s;
+  --fall-duration: 18.4s;
+  --paper-start: -8deg;
+  --paper-middle: 10deg;
+  --paper-sway: 5deg;
+  --paper-end: 21deg;
+  --paper-drift: -27px;
+  --paper-return-drift: 15px;
+}
+@keyframes paper-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -14vh, 0) rotate(var(--paper-start));
+  }
+  10% {
+    opacity: 0.5;
+  }
+  45% {
+    opacity: 0.48;
+    transform: translate3d(var(--paper-drift), 43vh, 0)
+      rotate(var(--paper-middle));
+  }
+  76% {
+    opacity: 0.4;
+    transform: translate3d(var(--paper-return-drift), 82vh, 0)
+      rotate(var(--paper-sway));
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--paper-drift), 128vh, 0)
+      rotate(var(--paper-end));
+  }
 }
 .what-is-traceback .eyebrow {
   margin-bottom: 58px;
@@ -1205,6 +1356,7 @@ select:focus-visible {
     transform 0.5s ease;
 }
 .what-is-traceback h2 {
+  width: 100%;
   max-width: 1050px;
   margin: 0;
   color: #4a2e27;
@@ -1256,6 +1408,19 @@ select:focus-visible {
     min-height: 78vh;
     padding: 15vh 24px;
   }
+  .what-is-content {
+    width: 100%;
+  }
+  .paper-two,
+  .paper-three {
+    display: none;
+  }
+  .paper-one {
+    left: -12%;
+  }
+  .paper-four {
+    right: -12%;
+  }
   .what-is-traceback .eyebrow {
     margin-bottom: 34px;
   }
@@ -1272,6 +1437,10 @@ select:focus-visible {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .falling-paper {
+    animation: none;
+    opacity: 0.24;
   }
 }
 
@@ -3657,5 +3826,188 @@ body {
   .interactive-pdf-layout .concept-detail {
     padding: 21px;
     border-radius: 17px;
+  }
+}
+
+/* Primary navigation: a compact, document-inspired product toolbar. */
+.topbar {
+  height: 76px;
+  padding-inline: clamp(18px, 2.5vw, 40px);
+  border-bottom-color: #625a5138;
+  background: #f7f3edf0;
+  box-shadow: 0 1px 0 #ffffff8f;
+}
+.brand {
+  width: 158px;
+  height: 38px;
+  border-radius: 8px;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.brand:hover {
+  opacity: 0.78;
+}
+.brand:focus-visible {
+  outline: 2px solid #53655b;
+  outline-offset: 4px;
+}
+.nav-steps {
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #8a7d7033;
+  border-radius: 999px;
+  background: #ebe5dc9e;
+  box-shadow: inset 0 1px #fffdf89e;
+}
+.nav-steps a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #625a51;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.nav-steps a:hover,
+.nav-steps a:focus-visible {
+  color: #3f4d45;
+  background: #fffdf8;
+  box-shadow: 0 2px 7px #625a511a;
+  text-decoration: none;
+}
+.nav-steps a:focus-visible {
+  outline: 2px solid #53655b;
+  outline-offset: 2px;
+}
+.topbar-actions {
+  gap: 14px;
+}
+.session-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding-right: 2px;
+  color: #625a51;
+  font-size: 11px;
+  font-weight: 650;
+}
+.session-status i {
+  width: 7px;
+  height: 7px;
+  margin: 0;
+  box-shadow: 0 0 0 3px #7e9a8421;
+}
+.demo-button {
+  min-height: 38px;
+  padding: 10px 14px;
+  border: 1px solid #53655b;
+  border-radius: 10px;
+  box-shadow: 0 6px 14px #53655b24;
+}
+.demo-button span {
+  display: inline-block;
+  margin-left: 7px;
+  transition: transform 0.2s ease;
+}
+.demo-button:hover span,
+.demo-button:focus-visible span {
+  transform: translate(2px, -2px);
+}
+@media (max-width: 800px) {
+  .topbar {
+    height: 68px;
+    padding-inline: 16px;
+  }
+  .brand {
+    width: 126px;
+    height: 34px;
+  }
+  .nav-steps {
+    gap: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .nav-steps a {
+    padding: 7px 6px;
+  }
+  .demo-button {
+    min-height: 34px;
+    padding: 8px 10px;
+  }
+}
+
+.github-link {
+  color: #625a51;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.github-link span {
+  display: inline-block;
+  margin-left: 3px;
+  transition: transform 0.2s ease;
+}
+.github-link:hover,
+.github-link:focus-visible {
+  color: #3f4d45;
+}
+.github-link:hover span,
+.github-link:focus-visible span {
+  transform: translate(2px, -2px);
+}
+.setup-heading {
+  margin-bottom: 8px;
+}
+.setup-subcopy {
+  margin: 0 0 15px;
+  color: #746d65;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.upload-selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 9px 2px 0;
+  color: #53655b;
+  font-size: 10px;
+  font-weight: 750;
+}
+.upload-selection-summary button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #746d65;
+  font: inherit;
+  font-size: 9px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.upload-selection-summary button:hover,
+.upload-selection-summary button:focus-visible {
+  color: #3f4d45;
+}
+@media (max-width: 1000px) {
+  .session-status {
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  .github-link {
+    display: none;
+  }
+  .setup-subcopy {
+    font-size: 10px;
+  }
+  .upload-selection-summary {
+    font-size: 9px;
   }
 }

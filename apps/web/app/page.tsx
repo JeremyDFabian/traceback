@@ -63,38 +63,44 @@ function UploadField({
   label,
   detail,
   accept,
-  capture,
-  file,
+  files,
+  multiple,
   onChange,
 }: {
   label: string;
   detail: string;
   accept: string;
-  capture?: boolean;
-  file?: File;
+  files: File[];
+  multiple?: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const pageCount = files.length;
+
   return (
     <label className="upload-card">
       <input
         className="sr-only"
         type="file"
         accept={accept}
-        capture={capture ? "environment" : undefined}
+        multiple={multiple}
         onChange={onChange}
       />
       <span className="upload-icon" aria-hidden="true">
         {accept === "application/pdf" ? "↗" : "⌁"}
       </span>
       <span>
-        <strong>{file ? file.name : label}</strong>
+        <strong>
+          {pageCount
+            ? `${pageCount} notebook ${pageCount === 1 ? "page" : "pages"} selected`
+            : label}
+        </strong>
         <small>
-          {file
-            ? `${Math.max(1, Math.round(file.size / 1024))} KB ready`
-            : detail}
+          {pageCount ? "Choose again anytime to add more pages." : detail}
         </small>
       </span>
-      <span className="upload-action">{file ? "Replace" : "Choose"}</span>
+      <span className="upload-action">
+        {pageCount ? "Add pages" : "Choose"}
+      </span>
     </label>
   );
 }
@@ -260,17 +266,49 @@ function WhatIsTraceback() {
       className={`what-is-traceback ${isVisible ? "is-visible" : ""}`}
       aria-labelledby="what-is-traceback-title"
     >
-      <p className="eyebrow">What is Traceback?</p>
-      <h2 id="what-is-traceback-title">
-        <span>A notebook photo becomes</span>
-        <em>an interactive PDF you can learn from.</em>
-        <span>No more pages trapped in a folder.</span>
-      </h2>
-      <p className="what-is-note">
-        Traceback extracts the text from your notes, preserves it in a clean
-        PDF, and adds hoverable ideas that open helpful context and relevant
-        links.
-      </p>
+      <div className="falling-papers" aria-hidden="true">
+        <article className="falling-paper paper-one">
+          <small>BIOLOGY</small>
+          <b>Cellular respiration</b>
+          <i />
+          <i />
+          <em>mitochondria → ATP</em>
+        </article>
+        <article className="falling-paper paper-two">
+          <small>STUDY NOTES</small>
+          <b>Photosynthesis</b>
+          <i />
+          <i />
+          <em>light + CO₂</em>
+        </article>
+        <article className="falling-paper paper-three">
+          <small>REVIEW</small>
+          <b>Key idea</b>
+          <i />
+          <i />
+          <em>ask why?</em>
+        </article>
+        <article className="falling-paper paper-four">
+          <small>LECTURE 04</small>
+          <b>Memory pathway</b>
+          <i />
+          <i />
+          <em>short-term → long-term</em>
+        </article>
+      </div>
+      <div className="what-is-content">
+        <p className="eyebrow">What is Traceback?</p>
+        <h2 id="what-is-traceback-title">
+          <span>A notebook photo becomes</span>
+          <em>an interactive PDF you can learn from.</em>
+          <span>No more pages trapped in a folder.</span>
+        </h2>
+        <p className="what-is-note">
+          Traceback extracts the text from your notes, preserves it in a clean
+          PDF, and adds hoverable ideas that open helpful context and relevant
+          links.
+        </p>
+      </div>
     </section>
   );
 }
@@ -381,7 +419,7 @@ function HowItWorks() {
 
 export default function Page() {
   const [screen, setScreen] = useState<Screen>("setup");
-  const [notebook, setNotebook] = useState<File>();
+  const [notebooks, setNotebooks] = useState<File[]>([]);
   const [imageUrl, setImageUrl] = useState<string>();
   const [stage, setStage] = useState(0);
   const [regions, setRegions] = useState(seededRegions);
@@ -416,11 +454,20 @@ export default function Page() {
   }, [screen]);
 
   function selectNotebook(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) return;
+
+    if (!notebooks.length) {
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      setImageUrl(URL.createObjectURL(files[0]));
+    }
+    setNotebooks((current) => [...current, ...files]);
+    event.target.value = "";
+  }
+  function clearNotebooks() {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setNotebook(file);
-    setImageUrl(URL.createObjectURL(file));
+    setNotebooks([]);
+    setImageUrl(undefined);
   }
   function beginAnalysis() {
     setStage(0);
@@ -455,7 +502,7 @@ export default function Page() {
   }
   return (
     <main className="app-shell">
-      <nav className="topbar">
+      <nav className="topbar" aria-label="Primary navigation">
         <button
           className="brand"
           onClick={() => setScreen("setup")}
@@ -484,8 +531,16 @@ export default function Page() {
           </a>
         </div>
         <div className="topbar-actions">
+          <a
+            className="github-link"
+            href="https://github.com/JeremyDFabian/traceback"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub <span>↗</span>
+          </a>
           <span className="session-status">
-            <i /> Session saved
+            <i /> Demo ready
           </span>
           <button className="demo-button" onClick={beginAnalysis}>
             Run demo <span>↗</span>
@@ -504,53 +559,48 @@ export default function Page() {
               />
             </div>
             <div id="upload-map" className="setup-card">
-              <p className="setup-intro">
-                Turn every study page into a smarter reference.
-              </p>
+              <p className="setup-intro">Your pages, all in one place.</p>
               <div className="setup-heading">
-                <span className="step-number">01</span>
                 <div>
-                  <p className="eyebrow">Create an interactive PDF</p>
-                  <h2>Upload a notebook photo</h2>
+                  <p className="eyebrow">Create your study reference</p>
+                  <h2>Upload notebook pages</h2>
                 </div>
               </div>
-              <div className="upload-flow" aria-label="Upload flow">
-                <span>
-                  <b>1</b> Add photo
-                </span>
-                <i>→</i>
-                <span>
-                  <b>2</b> We create your PDF
-                </span>
-              </div>
+              <p className="setup-subcopy">
+                Add one page or a whole notebook. We keep your pages together
+                and make each one easier to revisit.
+              </p>
               <UploadField
-                label="Choose a clear notebook photo"
-                detail="JPG, PNG, or take a photo · Include arrows if you have them"
+                label="Choose notebook photos"
+                detail="Select clear JPG or PNG pages. You can add more afterward."
                 accept="image/*"
-                capture
-                file={notebook}
+                multiple
+                files={notebooks}
                 onChange={selectNotebook}
               />
-              <div className="pdf-preview">
-                <i>⌁</i>
-                <span>
-                  <b>Interactive PDF</b>
-                  <small>Highlights + linked context</small>
-                </span>
-                <em>Preview</em>
-              </div>
+              {notebooks.length ? (
+                <div className="upload-selection-summary" aria-live="polite">
+                  <span>
+                    {notebooks.length}{" "}
+                    {notebooks.length === 1 ? "page" : "pages"} queued
+                  </span>
+                  <button type="button" onClick={clearNotebooks}>
+                    Clear all
+                  </button>
+                </div>
+              ) : null}
               <button
                 className="primary-button"
-                disabled={!notebook}
+                disabled={!notebooks.length}
                 onClick={beginAnalysis}
               >
                 Create my PDF <span>→</span>
               </button>
               <button className="card-demo-button" onClick={beginAnalysis}>
-                Run demo <span>↗</span>
+                View a finished example <span>↗</span>
               </button>
               <p className="privacy-note">
-                Your photo is used only to create this interactive PDF.
+                Your photos are used only to create this interactive PDF.
               </p>
             </div>
           </section>
@@ -764,7 +814,7 @@ export default function Page() {
             >
               <header>
                 <span>TRACEBACK PDF</span>
-                <span>Page 1 of 1</span>
+                <span>Page 1 of {Math.max(notebooks.length, 1)}</span>
               </header>
               <div className="pdf-page-content">
                 <p className="pdf-kicker">EXTRACTED FROM YOUR NOTEBOOK</p>

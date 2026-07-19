@@ -8,13 +8,11 @@ describe("home page", () => {
     render(<Page />);
 
     expect(
-      screen.getByText("Turn every study page into a smarter reference."),
+      screen.getByText("Your pages, all in one place."),
     ).toBeInTheDocument();
+    expect(screen.getByText("Choose notebook photos")).toBeInTheDocument();
     expect(
-      screen.getByText("Choose a clear notebook photo"),
+      screen.getByRole("button", { name: /run demo/i }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /run demo/i })).toHaveLength(
-      2,
-    );
   });
 });
