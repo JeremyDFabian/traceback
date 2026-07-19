@@ -15,7 +15,7 @@ from app.schemas.learning import (
     GraphNode,
     GraphResponse,
 )
-from app.storage import load_json
+from app.storage import get_object_storage, load_json
 
 router = APIRouter(tags=["learning"])
 
@@ -36,6 +36,7 @@ def _load_confirmed_analysis(
             load_json(
                 get_settings().storage_dir,
                 confirmed_analysis_storage_key(session_id),
+                get_object_storage(get_settings()),
             )
         )
     except FileNotFoundError as error:

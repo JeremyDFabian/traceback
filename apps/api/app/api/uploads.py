@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from app.core.config import get_settings
 from app.db import get_connection
 from app.schemas.upload import UploadResponse
-from app.storage import save_upload
+from app.storage import get_object_storage, save_upload
 
 router = APIRouter(tags=["uploads"])
 UploadKind = Literal["deck", "notebook_page"]
@@ -38,11 +38,13 @@ def _upload_file(
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
     _require_session(connection, session_id)
+    settings = get_settings()
     storage_path = save_upload(
-        get_settings().storage_dir,
+        settings.storage_dir,
         session_id,
         kind,
         upload,
+        get_object_storage(settings),
     )
     if column_name == "lecture_pdf_path":
         connection.execute(

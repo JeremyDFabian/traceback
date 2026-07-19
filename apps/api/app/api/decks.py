@@ -10,6 +10,7 @@ from app.db import get_connection
 from app.pdf import extract_pdf
 from app.persistence import persist_slide_passages
 from app.schemas.deck import DeckExtractionResponse
+from app.storage import get_object_storage, materialize_file
 
 router = APIRouter(tags=["decks"])
 
@@ -33,7 +34,12 @@ def extract_session_deck(
     if not lecture_pdf_path:
         raise HTTPException(status_code=400, detail="Session has no lecture PDF")
 
-    pdf_path = get_settings().storage_dir / lecture_pdf_path
+    settings = get_settings()
+    pdf_path = materialize_file(
+        settings.storage_dir,
+        lecture_pdf_path,
+        get_object_storage(settings),
+    )
     if not pdf_path.is_file():
         raise HTTPException(status_code=404, detail="Lecture PDF file not found")
 
