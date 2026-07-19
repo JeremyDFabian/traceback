@@ -1,25 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import demoFixture from "../../../sample-data/mitochondria-atp/expected.json";
+
 import Page from "./page";
 
 const generatedCards = {
-  flashcards: [
-    {
-      id: "00000000-0000-4000-8000-000000000101",
-      question: "What is the main site of aerobic ATP production?",
-      answer: "The mitochondrion.",
-      difficulty: "easy" as const,
-      source: {
-        session_id: "00000000-0000-4000-8000-000000000001",
-        region_id: "region-mitochondria",
-        slide_number: 7,
-        slide_text:
-          "The mitochondrion is the main site of aerobic ATP production.",
-        highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
-      },
-    },
-  ],
+  flashcards: demoFixture.generated_flashcards,
 };
 
 afterEach(() => vi.restoreAllMocks());
@@ -54,25 +41,29 @@ describe("home page", () => {
         method: "POST",
         body: JSON.stringify({
           source: {
-            session_id: "00000000-0000-4000-8000-000000000001",
-            region_id: "region-mitochondria",
-            slide_number: 7,
-            note_text: "Mitochondria make ATP during aerobic respiration.",
-            slide_text:
-              "The mitochondrion is the main site of aerobic ATP production.",
-            highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
+            session_id: demoFixture.session_id,
+            region_id: demoFixture.approved_analysis.regions[0].id,
+            slide_number: demoFixture.expected_match.slide_number,
+            note_text: demoFixture.approved_analysis.regions[0].transcription,
+            slide_text: demoFixture.expected_match.passage,
+            highlight_boxes: demoFixture.expected_match.highlight_boxes,
           },
-          count: 2,
+          count: demoFixture.flashcard_count,
         }),
       }),
     );
     expect(
-      screen.getByText(
-        "The mitochondrion is the main site of aerobic ATP production.",
-      ),
+      screen.getByText(demoFixture.expected_match.passage),
     ).toBeInTheDocument();
+    const box = demoFixture.expected_match.highlight_boxes[0];
     expect(
-      screen.getByText("x 10% · y 20% · width 30% · height 10%"),
+      screen.getByText(
+        `x ${Math.round(box.x * 100)}% · y ${Math.round(
+          box.y * 100,
+        )}% · width ${Math.round(box.width * 100)}% · height ${Math.round(
+          box.height * 100,
+        )}%`,
+      ),
     ).toBeInTheDocument();
   });
 

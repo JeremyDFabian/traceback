@@ -4,23 +4,25 @@ import { useState } from "react";
 
 import type { components } from "@traceback/api-client";
 
+import demoFixture from "../../../sample-data/mitochondria-atp/expected.json";
+
 import { FlashcardReview, type ReviewFlashcard } from "./flashcard-review";
 
 type GenerateRequest = components["schemas"]["GenerateFlashcardsRequest"];
 type GenerateResponse = components["schemas"]["GenerateFlashcardsResponse"];
 
-const slidePassage =
-  "The mitochondrion is the main site of aerobic ATP production.";
+const region = demoFixture.approved_analysis.regions[0];
+const slidePassage = demoFixture.expected_match.passage;
 const demoRequest: GenerateRequest = {
   source: {
-    session_id: "00000000-0000-4000-8000-000000000001",
-    region_id: "region-mitochondria",
-    slide_number: 7,
-    note_text: "Mitochondria make ATP during aerobic respiration.",
+    session_id: demoFixture.session_id,
+    region_id: region.id,
+    slide_number: demoFixture.expected_match.slide_number,
+    note_text: region.transcription,
     slide_text: slidePassage,
-    highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
+    highlight_boxes: demoFixture.expected_match.highlight_boxes,
   },
-  count: 2,
+  count: demoFixture.flashcard_count,
 };
 
 export default function Page() {
