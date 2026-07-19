@@ -1,25 +1,20 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import Page from "./page";
 
 describe("home page", () => {
-  it("reviews the demo batch and reports the completion result", () => {
+  it("starts a new study session with both required uploads", () => {
     render(<Page />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Traceback" }),
+      screen.getByRole("heading", { level: 1, name: /make every margin/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Review flashcards" }),
+      screen.getByRole("button", { name: /upload lecture slides/i }),
     ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm batch" }));
-
     expect(
-      screen.getByText("Review complete: 0 approved · 2 rejected"),
+      screen.getByRole("button", { name: /find connections/i }),
     ).toBeInTheDocument();
   });
 });
