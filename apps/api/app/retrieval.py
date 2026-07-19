@@ -1,6 +1,7 @@
 import re
 
 from app.schemas.deck import ExtractedSlide, TextSpan
+from app.schemas.flashcards import HighlightBox
 from app.schemas.match import MatchResponse
 
 
@@ -43,6 +44,7 @@ def match_region(
             slide_number=None,
             passage="",
             highlights=[],
+            highlight_boxes=[],
             similarity_score=0.0,
             reason="No shared terms were found in the extracted slide text.",
         )
@@ -59,6 +61,15 @@ def match_region(
         slide_number=best_slide.slide_number,
         passage=best_text,
         highlights=best_highlights,
+        highlight_boxes=[
+            HighlightBox(
+                x=span.x / best_slide.width,
+                y=span.y / best_slide.height,
+                width=span.width / best_slide.width,
+                height=span.height / best_slide.height,
+            )
+            for span in best_highlights
+        ],
         similarity_score=best_score,
         reason=reason,
     )

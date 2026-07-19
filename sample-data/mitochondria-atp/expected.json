@@ -1,0 +1,117 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "approved_analysis": {
+    "page_summary": "Cellular respiration notes about mitochondria and ATP.",
+    "regions": [
+      {
+        "id": "region-mitochondria",
+        "label": "Mitochondria and ATP",
+        "transcription": "Mitochondria produce ATP during aerobic respiration.",
+        "type": "concept",
+        "bbox": {
+          "x": 0.12,
+          "y": 0.25,
+          "width": 0.76,
+          "height": 0.18
+        },
+        "markers": ["star"],
+        "confidence": 0.94
+      }
+    ],
+    "relationships": []
+  },
+  "expected_match": {
+    "region_id": "region-mitochondria",
+    "status": "matched",
+    "slide_number": 2,
+    "passage": "Cellular Respiration Mitochondria produce ATP during aerobic respiration. ATP stores usable chemical energy for cellular work.",
+    "minimum_similarity_score": 0.2,
+    "highlight_boxes": [
+      {
+        "x": 0.12,
+        "y": 0.08024999618530274,
+        "width": 0.3489600118001302,
+        "height": 0.04122000694274902
+      },
+      {
+        "x": 0.12,
+        "y": 0.20081249237060547,
+        "width": 0.710279795328776,
+        "height": 0.030915012359619142
+      },
+      {
+        "x": 0.12,
+        "y": 0.8561875152587891,
+        "width": 0.5433164978027344,
+        "height": 0.024044952392578124
+      }
+    ]
+  },
+  "flashcard_count": 2,
+  "generated_flashcards": [
+    {
+      "id": "00000000-0000-4000-8000-000000000101",
+      "question": "Where is ATP produced during aerobic respiration?",
+      "answer": "Mitochondria produce ATP during aerobic respiration.",
+      "difficulty": "easy",
+      "source": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "region_id": "region-mitochondria",
+        "slide_number": 2,
+        "slide_text": "Cellular Respiration Mitochondria produce ATP during aerobic respiration. ATP stores usable chemical energy for cellular work.",
+        "highlight_boxes": [
+          {
+            "x": 0.12,
+            "y": 0.08024999618530274,
+            "width": 0.3489600118001302,
+            "height": 0.04122000694274902
+          },
+          {
+            "x": 0.12,
+            "y": 0.20081249237060547,
+            "width": 0.710279795328776,
+            "height": 0.030915012359619142
+          },
+          {
+            "x": 0.12,
+            "y": 0.8561875152587891,
+            "width": 0.5433164978027344,
+            "height": 0.024044952392578124
+          }
+        ]
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000102",
+      "question": "Why are mitochondria important for cellular work?",
+      "answer": "They produce ATP, which stores usable chemical energy.",
+      "difficulty": "medium",
+      "source": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "region_id": "region-mitochondria",
+        "slide_number": 2,
+        "slide_text": "Cellular Respiration Mitochondria produce ATP during aerobic respiration. ATP stores usable chemical energy for cellular work.",
+        "highlight_boxes": [
+          {
+            "x": 0.12,
+            "y": 0.08024999618530274,
+            "width": 0.3489600118001302,
+            "height": 0.04122000694274902
+          },
+          {
+            "x": 0.12,
+            "y": 0.20081249237060547,
+            "width": 0.710279795328776,
+            "height": 0.030915012359619142
+          },
+          {
+            "x": 0.12,
+            "y": 0.8561875152587891,
+            "width": 0.5433164978027344,
+            "height": 0.024044952392578124
+          }
+        ]
+      }
+    }
+  ]
+}

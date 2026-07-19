@@ -1,5 +1,5 @@
-﻿from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -30,7 +30,9 @@ class GeminiAnalysis:
     warnings: list[str]
 
 
-def gemini_response_schema(model: type[BaseModel] = NotebookAnalysisResult) -> dict[str, Any]:
+def gemini_response_schema(
+    model: type[BaseModel] = NotebookAnalysisResult,
+) -> dict[str, Any]:
     """Return a Gemini-compatible version of the Pydantic response schema."""
     schema = model.model_json_schema()
     remove_unsupported_schema_keywords(schema)
@@ -39,11 +41,13 @@ def gemini_response_schema(model: type[BaseModel] = NotebookAnalysisResult) -> d
 
 def remove_unsupported_schema_keywords(value: Any) -> None:
     if isinstance(value, dict):
-        value.pop("exclusiveMinimum", None)
-        for child in value.values():
+        schema_object = cast(dict[str, Any], value)
+        schema_object.pop("exclusiveMinimum", None)
+        for child in schema_object.values():
             remove_unsupported_schema_keywords(child)
     elif isinstance(value, list):
-        for child in value:
+        schema_list = cast(list[Any], value)
+        for child in schema_list:
             remove_unsupported_schema_keywords(child)
 
 
@@ -67,8 +71,8 @@ def analyze_notebook_with_gemini(
                 types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
             ],
             config=types.GenerateContentConfig(
-                responseMimeType="application/json",
-                responseSchema=gemini_response_schema(),
+                response_mime_type="application/json",
+                response_schema=gemini_response_schema(),
                 temperature=0,
             ),
         )
