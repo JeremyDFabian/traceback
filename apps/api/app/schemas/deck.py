@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TextSpan(BaseModel):
@@ -11,8 +11,8 @@ class TextSpan(BaseModel):
 
 class ExtractedSlide(BaseModel):
     slide_number: int
-    width: float
-    height: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
     spans: list[TextSpan]
 
 

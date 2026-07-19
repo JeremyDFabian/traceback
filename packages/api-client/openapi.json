@@ -102,6 +102,7 @@
       "ExtractedSlide": {
         "properties": {
           "height": {
+            "exclusiveMinimum": 0.0,
             "title": "Height",
             "type": "number"
           },
@@ -117,6 +118,7 @@
             "type": "array"
           },
           "width": {
+            "exclusiveMinimum": 0.0,
             "title": "Width",
             "type": "number"
           }
@@ -584,6 +586,13 @@
       },
       "MatchResponse": {
         "properties": {
+          "highlight_boxes": {
+            "items": {
+              "$ref": "#/components/schemas/HighlightBox"
+            },
+            "title": "Highlight Boxes",
+            "type": "array"
+          },
           "highlights": {
             "items": {
               "$ref": "#/components/schemas/TextSpan"
@@ -630,6 +639,7 @@
           "slide_number",
           "passage",
           "highlights",
+          "highlight_boxes",
           "similarity_score",
           "reason"
         ],
