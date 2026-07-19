@@ -8,16 +8,11 @@ describe("home page", () => {
     render(<Page />);
 
     expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /turn handwritten notes into ideas you can explore/i,
-      }),
+      screen.getByText("Turn every study page into a smarter reference."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /choose a clear notebook photo/i }),
+      screen.getByText("Choose a clear notebook photo"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /run demo/i }),
-    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /run demo/i })).toHaveLength(2);
   });
 });
