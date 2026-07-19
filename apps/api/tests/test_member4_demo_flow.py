@@ -45,9 +45,16 @@ def test_confirmed_region_matches_real_pdf_and_generates_grounded_cards(
     shutil.copyfile(FIXTURE_DIR / lecture_name, tmp_path / lecture_name)
 
     connection = MagicMock()
-    cursor = MagicMock()
-    cursor.fetchone.side_effect = [(session_id,), (lecture_name,)]
-    connection.execute.return_value = cursor
+
+    def execute(statement, *_args):
+        cursor = MagicMock()
+        if "select lecture_pdf_path" in statement:
+            cursor.fetchone.return_value = (lecture_name,)
+        elif "select id from public.sessions" in statement or "returning id" in statement:
+            cursor.fetchone.return_value = (session_id,)
+        return cursor
+
+    connection.execute.side_effect = execute
     settings = SimpleNamespace(storage_dir=tmp_path)
     monkeypatch.setattr(analysis, "get_settings", lambda: settings)
     monkeypatch.setattr(matches, "get_settings", lambda: settings)

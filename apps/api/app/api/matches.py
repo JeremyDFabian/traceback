@@ -8,10 +8,11 @@ from app.api.analysis import confirmed_analysis_storage_key
 from app.core.config import get_settings
 from app.db import get_connection
 from app.pdf import extract_pdf
+from app.persistence import persist_match
 from app.retrieval import match_region
 from app.schemas.analysis import AnalysisResult
 from app.schemas.match import MatchResponse
-from app.storage import load_json
+from app.storage import get_object_storage, load_json, materialize_file
 
 router = APIRouter(tags=["matches"])
 
@@ -35,10 +36,12 @@ def match_session_region(
         raise HTTPException(status_code=400, detail="Session has no lecture PDF")
 
     try:
+        settings = get_settings()
         analysis = AnalysisResult.model_validate(
             load_json(
-                get_settings().storage_dir,
+                settings.storage_dir,
                 confirmed_analysis_storage_key(session_id),
+                get_object_storage(settings),
             )
         )
     except FileNotFoundError as error:
@@ -48,12 +51,19 @@ def match_session_region(
     if region is None:
         raise HTTPException(status_code=404, detail="Region not found")
 
-    pdf_path = get_settings().storage_dir / row[0]
+    settings = get_settings()
+    pdf_path = materialize_file(
+        settings.storage_dir,
+        row[0],
+        get_object_storage(settings),
+    )
     if not pdf_path.is_file():
         raise HTTPException(status_code=404, detail="Lecture PDF file not found")
 
-    return match_region(
+    match = match_region(
         region_id=region.id,
         query=f"{region.label} {region.transcription}",
         slides=extract_pdf(pdf_path),
     )
+    persist_match(connection, session_id, match)
+    return match
