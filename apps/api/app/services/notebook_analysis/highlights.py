@@ -73,9 +73,7 @@ def is_valid_highlight_phrase(phrase: str, typed_text: str) -> bool:
     if not normalized_phrase or len(normalized_phrase.split()) > MAX_HIGHLIGHT_WORDS:
         return False
 
-    phrase_pattern = r"\s+".join(
-        re.escape(word) for word in normalized_phrase.split()
-    )
+    phrase_pattern = r"\s+".join(re.escape(word) for word in normalized_phrase.split())
     return bool(re.search(rf"\b{phrase_pattern}\b", typed_text, re.IGNORECASE))
 
 
@@ -115,8 +113,7 @@ def filter_interactive_regions(
                     "highlight_text": highlight_text,
                     "explanation": region.explanation
                     or f"{label} is a key topic in this notebook page.",
-                    "trusted_source_queries": region.trusted_source_queries
-                    or [label],
+                    "trusted_source_queries": region.trusted_source_queries or [label],
                 }
             )
         )
@@ -151,9 +148,7 @@ def build_heuristic_highlights(
                         "label": phrase,
                         "highlight_text": phrase,
                         "type": "concept",
-                        "explanation": (
-                            f"{phrase} is a key topic detected in this notebook page."
-                        ),
+                        "explanation": (f"{phrase} is a key topic detected in this notebook page."),
                         "trusted_source_queries": [phrase],
                     }
                 )

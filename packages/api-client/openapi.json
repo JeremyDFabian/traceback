@@ -833,6 +833,108 @@
         "title": "NotebookAnalysisResult",
         "type": "object"
       },
+      "NotebookFlashcard": {
+        "properties": {
+          "answer": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Answer",
+            "type": "string"
+          },
+          "difficulty": {
+            "enum": ["easy", "medium", "hard"],
+            "title": "Difficulty",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "source_phrase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Phrase"
+          }
+        },
+        "required": ["id", "question", "answer", "difficulty"],
+        "title": "NotebookFlashcard",
+        "type": "object"
+      },
+      "NotebookFlashcardRequest": {
+        "properties": {
+          "count": {
+            "default": 5,
+            "maximum": 10.0,
+            "minimum": 3.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "highlights": {
+            "items": {
+              "$ref": "#/components/schemas/NotebookHighlightInput"
+            },
+            "maxItems": 30,
+            "title": "Highlights",
+            "type": "array"
+          },
+          "typed_text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Typed Text",
+            "type": "string"
+          }
+        },
+        "required": ["typed_text"],
+        "title": "NotebookFlashcardRequest",
+        "type": "object"
+      },
+      "NotebookFlashcardResponse": {
+        "properties": {
+          "flashcards": {
+            "items": {
+              "$ref": "#/components/schemas/NotebookFlashcard"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Flashcards",
+            "type": "array"
+          }
+        },
+        "required": ["flashcards"],
+        "title": "NotebookFlashcardResponse",
+        "type": "object"
+      },
+      "NotebookHighlightInput": {
+        "properties": {
+          "id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "phrase": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Phrase",
+            "type": "string"
+          }
+        },
+        "required": ["id", "phrase"],
+        "title": "NotebookHighlightInput",
+        "type": "object"
+      },
       "NotebookMarker": {
         "properties": {
           "bbox": {
@@ -901,6 +1003,11 @@
           "explanation": {
             "default": "",
             "title": "Explanation",
+            "type": "string"
+          },
+          "highlight_text": {
+            "default": "",
+            "title": "Highlight Text",
             "type": "string"
           },
           "id": {
@@ -1366,6 +1473,45 @@
         },
         "summary": "Analyze Notebook Page Route",
         "tags": ["notebook-analysis"]
+      }
+    },
+    "/api/notebook-flashcards/generate": {
+      "post": {
+        "operationId": "generate_cards_api_notebook_flashcards_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotebookFlashcardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotebookFlashcardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Cards",
+        "tags": ["notebook-flashcards"]
       }
     },
     "/api/sessions": {

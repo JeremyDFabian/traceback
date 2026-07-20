@@ -5,6 +5,9 @@
 .next/
 .superpowers/
 .pytest_cache/
+.test-tmp-*/
+.tmp/
+.uv-cache/
 .ruff_cache/
 .venv/
 __pycache__/
