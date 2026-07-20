@@ -16,4 +16,16 @@ Object.defineProperty(globalThis, "IntersectionObserver", {
   value: IntersectionObserverMock,
 });
 
+Object.defineProperty(URL, "createObjectURL", {
+  configurable: true,
+  writable: true,
+  value: () => "blob:notebook-preview",
+});
+
+Object.defineProperty(URL, "revokeObjectURL", {
+  configurable: true,
+  writable: true,
+  value: () => undefined,
+});
+
 afterEach(cleanup);

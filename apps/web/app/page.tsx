@@ -1,6 +1,16 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  analyzeNotebook,
+  createSession,
+  saveAnalysis,
+  toStoredAnalysis,
+  uploadDeck,
+  uploadNotebookPage,
+  type StoredAnalysis,
+  type VisionRegion,
+} from "./session-api";
 
 type Marker = "star" | "question";
 type HighlightColor = "yellow" | "blue" | "pink" | "red";
@@ -46,6 +56,7 @@ type PageAnalysis = {
   pageSummary: string;
   typedText: string;
   regions: Region[];
+  relationships: StoredAnalysis["relationships"];
   warnings: string[];
 };
 
@@ -157,36 +168,32 @@ const seededRegions: Region[] = [
 ];
 
 const stages = [
-  "Reading handwriting with OCR",
-  "Extracting clean typed text",
-  "Finding key topics to highlight",
-  "Building your interactive PDF",
+  "Creating session",
+  "Uploading lecture",
+  "Uploading notebook",
+  "Analyzing notebook",
+  "Saving analysis",
 ];
 
 function UploadField({
   label,
   detail,
   accept,
-  files,
-  multiple,
+  file,
   onChange,
 }: {
   label: string;
   detail: string;
   accept: string;
-  files: File[];
-  multiple?: boolean;
+  file?: File;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
-  const pageCount = files.length;
-
   return (
     <label className="upload-card">
       <input
         className="sr-only"
         type="file"
         accept={accept}
-        multiple={multiple}
         onChange={onChange}
       />
       <span className="upload-icon" aria-hidden="true">
@@ -194,16 +201,14 @@ function UploadField({
       </span>
       <span>
         <strong>
-          {pageCount
-            ? `${pageCount} notebook ${pageCount === 1 ? "page" : "pages"} selected`
-            : label}
+          {file ? `${file.name} selected` : label}
         </strong>
         <small>
-          {pageCount ? "Choose again anytime to add more pages." : detail}
+          {file ? "Choose again to replace this file." : detail}
         </small>
       </span>
       <span className="upload-action">
-        {pageCount ? "Add pages" : "Choose"}
+        {file ? "Replace" : "Choose"}
       </span>
     </label>
   );
@@ -438,10 +443,11 @@ function fileToBase64(file: File) {
   });
 }
 
-function normalizeRegion(region: ApiNotebookRegion): Region {
-  const marker = region.markers.includes("star")
+function normalizeRegion(region: VisionRegion): Region {
+  const markers = region.markers ?? [];
+  const marker = markers.includes("star")
     ? "star"
-    : region.markers.includes("question")
+    : markers.includes("question")
       ? "question"
       : undefined;
   const type =
@@ -463,27 +469,7 @@ function normalizeRegion(region: ApiNotebookRegion): Region {
     confidence: Math.round(region.confidence * 100),
     transcription: region.transcription,
     explanation: region.explanation,
-    trustedSourceQueries: region.trusted_source_queries,
-  };
-}
-
-async function analyzeNotebook(file: File): Promise<PageAnalysis> {
-  const imageBase64 = await fileToBase64(file);
-  const response = await fetch(`${apiBaseUrl}/api/notebook-analysis`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image_base64: imageBase64 }),
-  });
-  if (!response.ok) {
-    throw new Error("Traceback could not analyze that notebook page.");
-  }
-
-  const analysis = (await response.json()) as ApiNotebookAnalysis;
-  return {
-    pageSummary: analysis.page_summary,
-    typedText: analysis.typed_text,
-    regions: analysis.regions.map(normalizeRegion),
-    warnings: analysis.warnings ?? [],
+    trustedSourceQueries: region.trusted_source_queries ?? [],
   };
 }
 
@@ -673,14 +659,15 @@ function HowItWorks() {
 
 export default function Page() {
   const [screen, setScreen] = useState<Screen>("setup");
-  const [notebooks, setNotebooks] = useState<File[]>([]);
+  const [lecture, setLecture] = useState<File>();
+  const [notebook, setNotebook] = useState<File>();
+  const [sessionId, setSessionId] = useState<string>();
   const [imageUrl, setImageUrl] = useState<string>();
   const [stage, setStage] = useState(0);
-  const [regions, setRegions] = useState(seededRegions);
-  const [selectedId, setSelectedId] = useState("mitochondria");
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [selectedId, setSelectedId] = useState("");
   const [approved, setApproved] = useState<string[]>([]);
-  const [pageAnalyses, setPageAnalyses] = useState<PageAnalysis[]>([]);
-  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [pageAnalysis, setPageAnalysis] = useState<PageAnalysis>();
   const [isLiveAnalysis, setIsLiveAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string>();
   const [conceptDetails, setConceptDetails] = useState<ConceptDetails>();
@@ -696,7 +683,6 @@ export default function Page() {
     x: number;
     y: number;
   }>();
-  const [editedDemoText, setEditedDemoText] = useState(demoTypedText);
   const [flashcards, setFlashcards] = useState<NotebookFlashcard[]>([]);
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [flashcardError, setFlashcardError] = useState<string>();
@@ -705,10 +691,8 @@ export default function Page() {
     () => regions.find((region) => region.id === selectedId) ?? regions[0],
     [regions, selectedId],
   );
-  const activeAnalysis = pageAnalyses[activePageIndex];
-  const renderedTypedText = activeAnalysis
-    ? activeAnalysis.typedText
-    : editedDemoText;
+  const activeAnalysis = pageAnalysis;
+  const renderedTypedText = activeAnalysis?.typedText ?? "";
   const hasUnsafeHighlightFallback = Boolean(
     activeAnalysis?.warnings.includes(
       "interactive_highlights_unavailable_showing_plain_ocr",
@@ -731,22 +715,6 @@ export default function Page() {
     },
     [imageUrl],
   );
-  useEffect(() => {
-    if (screen !== "processing" || isLiveAnalysis) return;
-    const timer = window.setInterval(
-      () =>
-        setStage((current) => {
-          if (current >= stages.length - 1) {
-            window.clearInterval(timer);
-            window.setTimeout(() => setScreen("trace"), 650);
-            return current;
-          }
-          return current + 1;
-        }),
-      800,
-    );
-    return () => window.clearInterval(timer);
-  }, [isLiveAnalysis, screen]);
   useEffect(() => {
     if (screen !== "trace" || !selected) {
       setConceptDetails(undefined);
@@ -788,81 +756,63 @@ export default function Page() {
   }, [screen, selected]);
 
   function selectNotebook(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    if (!files.length) return;
-
-    if (!notebooks.length) {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
-      setImageUrl(URL.createObjectURL(files[0]));
-    }
-    setNotebooks((current) => [...current, ...files]);
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (imageUrl) URL.revokeObjectURL(imageUrl);
+    setNotebook(file);
+    setImageUrl(URL.createObjectURL(file));
     event.target.value = "";
   }
-  function clearNotebooks() {
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setNotebooks([]);
-    setImageUrl(undefined);
+  function selectLecture(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLecture(file);
+    event.target.value = "";
   }
   function beginAnalysis() {
+    if (!lecture || !notebook) return;
     setAnalysisError(undefined);
-    setStage(0);
-
-    if (notebooks.length) {
-      void analyzeNotebookPages();
-      return;
-    }
-
-    setIsLiveAnalysis(false);
-    setPageAnalyses([]);
-    setActivePageIndex(0);
-    setRegions(seededRegions);
-    setSelectedId(seededRegions[0].id);
-    setScreen("processing");
+    void analyzeNotebookPage();
   }
-  async function analyzeNotebookPages() {
+  async function analyzeNotebookPage() {
+    if (!lecture || !notebook) return;
     setStage(0);
     setIsLiveAnalysis(true);
     setScreen("processing");
 
     try {
-      const analyses: PageAnalysis[] = [];
-      for (const file of notebooks) {
-        analyses.push(await analyzeNotebook(file));
-        setStage((current) => Math.min(stages.length - 1, current + 1));
-      }
-
-      const firstPage = analyses[0];
-      if (!firstPage)
-        throw new Error("Traceback could not read those notebook pages.");
-      setPageAnalyses(analyses);
-      setActivePageIndex(0);
-      setRegions(firstPage.regions);
-      setSelectedId(firstPage.regions[0]?.id ?? "");
-      setScreen("trace");
+      const activeSession = sessionId ?? (await createSession()).id;
+      setSessionId(activeSession);
+      setStage(1);
+      await uploadDeck(activeSession, lecture);
+      setStage(2);
+      await uploadNotebookPage(activeSession, notebook);
+      setStage(3);
+      const vision = await analyzeNotebook(notebook);
+      const stored = toStoredAnalysis(vision);
+      setStage(4);
+      await saveAnalysis(activeSession, stored);
+      const analysis: PageAnalysis = {
+        pageSummary: vision.page_summary,
+        typedText: vision.typed_text,
+        regions: vision.regions.map(normalizeRegion),
+        relationships: stored.relationships,
+        warnings: vision.warnings,
+      };
+      setPageAnalysis(analysis);
+      setRegions(analysis.regions);
+      setSelectedId(analysis.regions[0]?.id ?? "");
+      setScreen("editor");
     } catch (error) {
       setAnalysisError(
         error instanceof Error
           ? error.message
-          : "Traceback could not analyze those notebook pages.",
+          : "Traceback could not prepare this study session.",
       );
       setScreen("setup");
     } finally {
       setIsLiveAnalysis(false);
     }
-  }
-  function showPage(index: number) {
-    const nextPage = pageAnalyses[index];
-    if (!nextPage) return;
-    setActivePageIndex(index);
-    setRegions(nextPage.regions);
-    setSelectedId(nextPage.regions[0]?.id ?? "");
-    setIsEditingNotes(false);
-    setIsAnnotating(false);
-    setSelectedNoteText("");
-    setSelectionPosition(undefined);
-    setAnnotationHint(
-      "Select a short phrase on the page to add a highlighter.",
-    );
   }
   function navigateTo(sectionId: "what-it-is" | "how-it-works") {
     setScreen("setup");
@@ -895,16 +845,8 @@ export default function Page() {
     setIsRepositioning(false);
   }
   function updateNoteText(nextText: string) {
-    if (!activeAnalysis) {
-      setEditedDemoText(nextText);
-      return;
-    }
-    setPageAnalyses((current) =>
-      current.map((analysis, index) =>
-        index === activePageIndex
-          ? { ...analysis, typedText: nextText }
-          : analysis,
-      ),
+    setPageAnalysis((current) =>
+      current ? { ...current, typedText: nextText } : current,
     );
   }
   function captureNoteSelection() {
@@ -1055,8 +997,15 @@ export default function Page() {
           </a>
         </div>
         <div className="topbar-actions">
-          <button className="demo-button" onClick={beginAnalysis}>
-            Run demo <span>↗</span>
+          <button
+            className="demo-button"
+            onClick={() =>
+              document
+                .getElementById("upload-map")
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
+          >
+            Start a session <span>↗</span>
           </button>
         </div>
       </nav>
@@ -1076,32 +1025,27 @@ export default function Page() {
               <div className="setup-heading">
                 <div>
                   <p className="eyebrow">Create your study reference</p>
-                  <h2>Upload notebook pages</h2>
+                  <h2>Upload your study materials</h2>
                 </div>
               </div>
               <p className="setup-subcopy">
-                Add one page or a whole notebook. We keep your pages together
-                and make each one easier to revisit.
+                Add one lecture PDF and one notebook image to build a grounded
+                study session.
               </p>
               <UploadField
-                label="Choose notebook photos"
-                detail="Select clear JPG or PNG pages. You can add more afterward."
+                label="Choose lecture PDF"
+                detail="Select the lecture PDF that grounds your notebook notes."
+                accept="application/pdf"
+                file={lecture}
+                onChange={selectLecture}
+              />
+              <UploadField
+                label="Choose notebook image"
+                detail="Select one clear JPG or PNG notebook page."
                 accept="image/*"
-                multiple
-                files={notebooks}
+                file={notebook}
                 onChange={selectNotebook}
               />
-              {notebooks.length ? (
-                <div className="upload-selection-summary" aria-live="polite">
-                  <span>
-                    {notebooks.length}{" "}
-                    {notebooks.length === 1 ? "page" : "pages"} queued
-                  </span>
-                  <button type="button" onClick={clearNotebooks}>
-                    Clear all
-                  </button>
-                </div>
-              ) : null}
               {analysisError ? (
                 <p className="analysis-error" role="alert">
                   {analysisError} Check that the API is running, then try again.
@@ -1109,16 +1053,13 @@ export default function Page() {
               ) : null}
               <button
                 className="primary-button"
-                disabled={!notebooks.length}
+                disabled={!lecture || !notebook || isLiveAnalysis}
                 onClick={beginAnalysis}
               >
                 Create my PDF <span>→</span>
               </button>
-              <button className="card-demo-button" onClick={beginAnalysis}>
-                View a finished example <span>↗</span>
-              </button>
               <p className="privacy-note">
-                Your photos are used only to create this interactive PDF.
+                Your files are used only to create this study session.
               </p>
             </div>
           </section>
@@ -1138,7 +1079,7 @@ export default function Page() {
             <br />
             something you can explore.
           </h1>
-          <div className="progress-list">
+          <div className="progress-list" aria-live="polite">
             {stages.map((item, index) => (
               <div key={item} className={index <= stage ? "done" : ""}>
                 <i>{index < stage ? "✓" : index === stage ? "" : ""}</i>
@@ -1480,13 +1421,12 @@ export default function Page() {
               <header>
                 <span>TRACEBACK PDF</span>
                 <span>
-                  Page {activePageIndex + 1} of{" "}
-                  {Math.max(pageAnalyses.length, 1)}
+                  Page 1 of 1
                 </span>
               </header>
               <div className="pdf-page-content">
                 <p className="pdf-kicker">EXTRACTED FROM YOUR NOTEBOOK</p>
-                <h2>{activeAnalysis?.pageSummary ?? "Cellular respiration"}</h2>
+                <h2>{activeAnalysis?.pageSummary ?? "Notebook analysis"}</h2>
                 {isEditingNotes ? (
                   <>
                     <p className="edit-note-helper">
@@ -1494,7 +1434,7 @@ export default function Page() {
                       return to reading.
                     </p>
                     <div
-                      key={`note-editor-${activePageIndex}`}
+                      key="note-editor"
                       className="editable-note-text"
                       contentEditable
                       suppressContentEditableWarning
@@ -1549,27 +1489,6 @@ export default function Page() {
                 <span>{regions.length} topics found</span>
               </footer>
             </section>
-            {pageAnalyses.length > 1 ? (
-              <div className="pdf-page-navigation" aria-label="Notebook pages">
-                <button
-                  type="button"
-                  disabled={activePageIndex === 0}
-                  onClick={() => showPage(activePageIndex - 1)}
-                >
-                  ← Previous page
-                </button>
-                <span>
-                  Page {activePageIndex + 1} / {pageAnalyses.length}
-                </span>
-                <button
-                  type="button"
-                  disabled={activePageIndex === pageAnalyses.length - 1}
-                  onClick={() => showPage(activePageIndex + 1)}
-                >
-                  Next page →
-                </button>
-              </div>
-            ) : null}
             {selected ? (
               <aside key={selected.id} className="concept-detail">
                 <p className="eyebrow">About this highlight</p>
