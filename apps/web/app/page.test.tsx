@@ -208,4 +208,49 @@ describe("home page", () => {
       expect(sessionApi.saveAnalysis).toHaveBeenCalledWith(session.id, stored);
     });
   });
+
+  it("requires explicit approval for an uncertain match", async () => {
+    mockInitialSession();
+    vi.spyOn(sessionApi, "confirmAnalysis").mockResolvedValue(stored);
+    vi.spyOn(sessionApi, "extractDeck").mockResolvedValue({
+      session_id: session.id,
+      slides: [],
+    });
+    vi.spyOn(sessionApi, "matchRegion").mockResolvedValue({
+      region_id: "region-1",
+      status: "uncertain",
+      slide_number: 2,
+      passage: "Mitochondria produce ATP.",
+      highlights: [],
+      highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
+      similarity_score: 0.15,
+      reason: "The slide is the best lexical match, but the score is low.",
+    });
+
+    render(<Page />);
+    selectRequiredFiles();
+    fireEvent.click(screen.getByRole("button", { name: /create my pdf/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /save & open pdf/i }),
+    );
+
+    expect(await screen.findByText("Uncertain match")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The slide is the best lexical match, but the score is low.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("15% confidence")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Use this match" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /generate flashcards/i }),
+    ).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Use this match" }));
+    expect(
+      screen.getByRole("button", { name: /generate flashcards/i }),
+    ).toBeEnabled();
+  });
 });

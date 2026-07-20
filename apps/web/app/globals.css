@@ -4966,3 +4966,27 @@ textarea:focus-visible {
   --highlight-color: #c7d8eeb8;
   --highlight-active: #9fbcdf;
 }
+.match-result {
+  margin-top: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--trace-white);
+}
+
+.match-result[data-status="matched"] {
+  background: #e9f0ee;
+}
+
+.match-result[data-status="uncertain"] {
+  background: #fff2d6;
+}
+
+.match-result[data-status="no_match"] {
+  background: #f3d5cc70;
+}
+
+.match-result h3,
+.match-result p {
+  margin: 0 0 0.5rem;
+}

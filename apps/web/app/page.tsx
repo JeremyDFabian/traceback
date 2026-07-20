@@ -3,12 +3,17 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   analyzeNotebook,
+  confirmAnalysis,
   createSession,
+  extractDeck,
+  matchRegion,
   saveAnalysis,
+  toConfirmedAnalysis,
   toStoredAnalysis,
   uploadDeck,
   uploadNotebookPage,
   type StoredAnalysis,
+  type MatchResult,
   type VisionRegion,
 } from "./session-api";
 
@@ -668,6 +673,14 @@ export default function Page() {
   const [selectedId, setSelectedId] = useState("");
   const [approved, setApproved] = useState<string[]>([]);
   const [pageAnalysis, setPageAnalysis] = useState<PageAnalysis>();
+  const [confirmedAnalysis, setConfirmedAnalysis] = useState<StoredAnalysis>();
+  const [matchResults, setMatchResults] = useState<Record<string, MatchResult>>(
+    {},
+  );
+  const [approvedUncertainRegionIds, setApprovedUncertainRegionIds] = useState<
+    string[]
+  >([]);
+  const [isMatching, setIsMatching] = useState(false);
   const [isLiveAnalysis, setIsLiveAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string>();
   const [conceptDetails, setConceptDetails] = useState<ConceptDetails>();
@@ -708,6 +721,12 @@ export default function Page() {
     );
   const visibleSources =
     conceptDetails?.sources ?? selected?.referenceLinks ?? [];
+  const hasEligibleMatch = Object.values(matchResults).some(
+    (match) =>
+      match.status === "matched" ||
+      (match.status === "uncertain" &&
+        approvedUncertainRegionIds.includes(match.region_id)),
+  );
 
   useEffect(
     () => () => {
@@ -848,6 +867,42 @@ export default function Page() {
     setPageAnalysis((current) =>
       current ? { ...current, typedText: nextText } : current,
     );
+  }
+  async function confirmAndMatch() {
+    if (!sessionId || !activeAnalysis) return;
+    setAnalysisError(undefined);
+    setIsMatching(true);
+    try {
+      const confirmed = toConfirmedAnalysis(
+        activeAnalysis.pageSummary,
+        regions,
+        activeAnalysis.relationships,
+      );
+      await confirmAnalysis(sessionId, confirmed);
+      await extractDeck(sessionId);
+      const marked = confirmed.regions.filter((region) =>
+        region.markers?.some(
+          (marker) => marker === "star" || marker === "question",
+        ),
+      );
+      const results = await Promise.all(
+        marked.map((region) => matchRegion(sessionId, region.id)),
+      );
+      setConfirmedAnalysis(confirmed);
+      setMatchResults(
+        Object.fromEntries(results.map((result) => [result.region_id, result])),
+      );
+      setApprovedUncertainRegionIds([]);
+      setScreen("trace");
+    } catch (error) {
+      setAnalysisError(
+        error instanceof Error
+          ? error.message
+          : "Traceback could not match the confirmed notes.",
+      );
+    } finally {
+      setIsMatching(false);
+    }
   }
   function captureNoteSelection() {
     const selection = window.getSelection();
@@ -1105,11 +1160,17 @@ export default function Page() {
             </div>
             <button
               className="primary-button"
-              disabled={!allHighlightsAreValid}
-              onClick={() => setScreen("trace")}
+              disabled={!allHighlightsAreValid || isMatching}
+              onClick={confirmAndMatch}
             >
-              Save &amp; open PDF <span>→</span>
+              {isMatching ? "Matching lecture…" : "Save & open PDF"}{" "}
+              <span>→</span>
             </button>
+            {analysisError ? (
+              <p className="analysis-error" role="alert">
+                {analysisError}
+              </p>
+            ) : null}
           </header>
           <div className="editor-grid">
             <div className="canvas-panel">
@@ -1404,7 +1465,7 @@ export default function Page() {
               </button>
               <button
                 className="primary-button flashcard-button"
-                disabled={isGeneratingFlashcards || !renderedTypedText.trim()}
+                disabled={isGeneratingFlashcards || !hasEligibleMatch}
                 onClick={generateFlashcards}
               >
                 {isGeneratingFlashcards
@@ -1510,6 +1571,52 @@ export default function Page() {
                       `${selected.label} is a key idea in this notebook page.`}
                   </p>
                 </div>
+                {selected.marker && matchResults[selected.id] ? (
+                  <section
+                    className="match-result"
+                    data-status={matchResults[selected.id].status}
+                    aria-labelledby={`match-${selected.id}-title`}
+                  >
+                    <h3 id={`match-${selected.id}-title`}>
+                      {matchResults[selected.id].status === "matched"
+                        ? "Matched source"
+                        : matchResults[selected.id].status === "uncertain"
+                          ? "Uncertain match"
+                          : "No source match"}
+                    </h3>
+                    <p>{matchResults[selected.id].reason}</p>
+                    <p>
+                      {Math.round(
+                        matchResults[selected.id].similarity_score * 100,
+                      )}
+                      % confidence
+                    </p>
+                    {matchResults[selected.id].status === "uncertain" ? (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        aria-pressed={approvedUncertainRegionIds.includes(
+                          selected.id,
+                        )}
+                        onClick={() =>
+                          setApprovedUncertainRegionIds((current) =>
+                            current.includes(selected.id)
+                              ? current.filter((id) => id !== selected.id)
+                              : [...current, selected.id],
+                          )
+                        }
+                      >
+                        {approvedUncertainRegionIds.includes(selected.id)
+                          ? "Match approved"
+                          : "Use this match"}
+                      </button>
+                    ) : null}
+                  </section>
+                ) : selected.marker ? (
+                  <p className="match-result" role="status">
+                    This marked region does not have a usable lecture match.
+                  </p>
+                ) : null}
                 <div className="reference-list">
                   <div className="reference-heading">
                     <p className="detail-label">Useful links</p>
