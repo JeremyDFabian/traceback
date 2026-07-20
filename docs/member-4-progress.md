@@ -1,11 +1,11 @@
 # Member 4 Progress
 
-**Last checked:** 2026-07-19
+**Last checked:** 2026-07-20
 
 `[x]` means the repository contains working code, tests, or documentation for
 the item. Update this file as work lands.
 
-**Latest Member 4 verification:** API tests: 73 passed; web tests: 5 passed;
+**Latest Member 4 verification:** API tests: 118 passed; web tests: 13 passed;
 lint, type checks, API-client regeneration, and production builds passed.
 After the vision-analysis merge, the expanded API suite requires Python 3.12
 or 3.13 because PaddlePaddle does not provide a Python 3.14 wheel.
@@ -25,9 +25,9 @@ or 3.13 because PaddlePaddle does not provide a Python 3.14 wheel.
 - [x] Show each card's slide and exact source passage during review.
 - [x] Request generation only after the student confirms a starred or questioned
       notebook region.
-- [ ] Connect the existing review UI to the frontend team's integrated student
+- [x] Connect the existing review UI to the frontend team's integrated student
       flow after its API handoff is ready.
-- [ ] Complete the full approved-region → slide match → flashcard generation →
+- [x] Complete the full approved-region → slide match → flashcard generation →
       review flow.
 
 ## Concept graph — after the MVP path works
@@ -54,7 +54,7 @@ or 3.13 because PaddlePaddle does not provide a Python 3.14 wheel.
       coordinates through the API and review UI.
 - [x] Verify every slide match exposes its source passage and normalized
       highlight coordinates.
-- [ ] Verify low-confidence results remain visibly distinct.
+- [x] Verify low-confidence results remain visibly distinct.
 - [ ] Verify keyboard navigation, readable contrast, phone-camera input, and the
       manual upload fallback.
 - [x] Run and pass the complete merge gate using the Windows equivalents of

@@ -20,7 +20,7 @@ an editable verification step, a grounded slide match, and marker-led study card
 
 ## Required before submission
 
-- [ ] Replace the current frontend demo data with a real end-to-end session:
+- [x] Replace the current frontend demo data with a real end-to-end session:
   upload a lecture PDF and notebook image, call the API, save the returned
   analysis, then confirm it.
 - [ ] Wire the overlay editor to React Konva and retain normalized bounding-box
