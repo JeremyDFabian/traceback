@@ -318,3 +318,26 @@ def test_notebook_analysis_requires_image_input() -> None:
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Provide either image_base64 or image_url."}
+
+
+def test_typed_text_groups_ocr_words_on_the_same_visual_line() -> None:
+    from app.schemas.notebook_analysis import BoundingBox, NotebookRegion
+    from app.services.notebook_analysis.analyzer import typed_text_from_regions
+
+    def region(identifier: str, text: str, x: float, y: float) -> NotebookRegion:
+        return NotebookRegion(
+            id=identifier,
+            label=text,
+            transcription=text,
+            type="concept",
+            bbox=BoundingBox(x=x, y=y, width=0.08, height=0.03),
+            confidence=0.9,
+        )
+
+    assert typed_text_from_regions(
+        [
+            region("two", "boxes", 0.24, 0.10),
+            region("one", "Bounding", 0.10, 0.10),
+            region("three", "are useful", 0.10, 0.18),
+        ]
+    ) == "Bounding boxes\nare useful"

@@ -3932,7 +3932,12 @@ textarea:focus-visible {
   padding: 13px 16px;
   font-size: 12px;
 }
-.annotatable-note-text.active > p:not(.annotation-instruction) {
+.annotatable-note-text.active,
+.annotatable-note-text.active * {
+  user-select: text;
+  cursor: text;
+}
+.pdf-page-content h2:has(+ .annotatable-note-text.active) {
   user-select: text;
   cursor: text;
 }
@@ -4221,6 +4226,57 @@ textarea:focus-visible {
   border-color: #4d0e12;
   box-shadow: 0 0 0 3px #a5bcd666;
 }
+.pdf-page-content h2.structured-note-page-title {
+  margin-bottom: 18px;
+  font: 800 25px/1.25 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.5px;
+}
+.notebook-plain-text {
+  max-width: 600px;
+  color: #4e4943;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.notebook-plain-text p {
+  margin: 0 0 12px;
+}
+
+.structured-notebook-text {
+  max-width: 600px;
+  color: #4e4943;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.structured-notebook-text h3 {
+  margin: 0 0 14px;
+  color: #3f3b36;
+  font-size: 18px;
+  line-height: 1.35;
+}
+.structured-notebook-text ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 1.3rem;
+  list-style: disc;
+}
+.structured-notebook-text li {
+  padding-left: 0.25rem;
+}
+.structured-notebook-text li > div {
+  overflow-wrap: anywhere;
+}
+.structured-notebook-text li strong {
+  color: #302c28;
+}
+.structured-notebook-text li small {
+  display: block;
+  margin-top: 3px;
+  color: #81786f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .pdf-highlight {
   display: inline;
   padding: 1px 3px;

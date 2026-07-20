@@ -1,4 +1,5 @@
 import json
+import re
 from uuid import uuid4
 
 from openai import OpenAI, OpenAIError
@@ -31,7 +32,7 @@ def generate_notebook_flashcards(
 ) -> NotebookFlashcardResponse:
     api_key = settings.openai_api_key
     if api_key is None or not api_key.get_secret_value().strip():
-        raise NotebookFlashcardGenerationError("OpenAI is not configured")
+        return build_note_based_flashcards(request)
 
     prompt = json.dumps(
         {
@@ -49,16 +50,16 @@ def generate_notebook_flashcards(
             input=prompt,
             text_format=GeneratedNotebookFlashcardBatch,
         )
-    except (OpenAIError, ValidationError) as exc:
-        raise NotebookFlashcardGenerationError("AI generation failed") from exc
+    except (OpenAIError, ValidationError):
+        return build_note_based_flashcards(request)
 
     batch = response.output_parsed
     if batch is None or len(batch.flashcards) != request.count:
-        raise NotebookFlashcardGenerationError("AI returned an incomplete flashcard set")
+        return build_note_based_flashcards(request)
 
     questions = {" ".join(card.question.split()).casefold() for card in batch.flashcards}
     if len(questions) != request.count:
-        raise NotebookFlashcardGenerationError("AI returned duplicate flashcards")
+        return build_note_based_flashcards(request)
 
     return NotebookFlashcardResponse(
         flashcards=[
@@ -66,3 +67,41 @@ def generate_notebook_flashcards(
             for card in batch.flashcards
         ]
     )
+
+
+def build_note_based_flashcards(
+    request: NotebookFlashcardRequest,
+) -> NotebookFlashcardResponse:
+    """Keep the study flow usable when a remote flashcard model is unavailable."""
+    sentences = [
+        " ".join(sentence.split())
+        for sentence in re.split(r"(?<=[.!?])\s+|\n+", request.typed_text)
+        if sentence.strip()
+    ] or [" ".join(request.typed_text.split())]
+    phrases = [highlight.phrase for highlight in request.highlights] or [None]
+    cards: list[NotebookFlashcard] = []
+    for index in range(request.count):
+        phrase = phrases[index % len(phrases)]
+        answer = next(
+            (
+                sentence
+                for sentence in sentences
+                if phrase and phrase.casefold() in sentence.casefold()
+            ),
+            sentences[index % len(sentences)],
+        )
+        question = (
+            f"What do your notes say about {phrase}?"
+            if phrase
+            else "What is one key idea from these notes?"
+        )
+        cards.append(
+            NotebookFlashcard(
+                id=str(uuid4()),
+                question=question,
+                answer=answer,
+                difficulty="easy" if index == 0 else "medium",
+                source_phrase=phrase,
+            )
+        )
+    return NotebookFlashcardResponse(flashcards=cards)

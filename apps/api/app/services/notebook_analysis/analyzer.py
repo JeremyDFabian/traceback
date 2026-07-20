@@ -123,16 +123,52 @@ async def analyze_notebook_page(
 
 
 def typed_text_from_regions(regions: list[NotebookRegion]) -> str:
-    lines: list[str] = []
-    for region in regions:
-        line = " ".join(region.transcription.split())
-        if not line or line in {"•", "0"}:
+    """Reconstruct readable lines from OCR blocks rather than stacking words."""
+    blocks = [
+        region
+        for region in regions
+        if " ".join(region.transcription.split()) not in {"", chr(0x2022), chr(0x00E2) + chr(0x20AC) + chr(0x00A2), "0"}
+    ]
+    if not blocks:
+        return ""
+
+    blocks.sort(
+        key=lambda region: (region.bbox.y + region.bbox.height / 2, region.bbox.x)
+    )
+    rows: list[list[NotebookRegion]] = []
+    row_centers: list[float] = []
+    row_heights: list[float] = []
+    for block in blocks:
+        center = block.bbox.y + block.bbox.height / 2
+        matching_row = next(
+            (
+                index
+                for index, row_center in enumerate(row_centers)
+                if abs(center - row_center)
+                <= max(row_heights[index], block.bbox.height) * 0.65
+            ),
+            None,
+        )
+        if matching_row is None:
+            rows.append([block])
+            row_centers.append(center)
+            row_heights.append(block.bbox.height)
             continue
 
+        row = rows[matching_row]
+        row.append(block)
+        row_centers[matching_row] = sum(
+            item.bbox.y + item.bbox.height / 2 for item in row
+        ) / len(row)
+        row_heights[matching_row] = max(item.bbox.height for item in row)
+
+    lines: list[str] = []
+    for row in rows:
+        row.sort(key=lambda region: region.bbox.x)
+        line = " ".join(" ".join(region.transcription.split()) for region in row)
         line = re.sub(r"\s+(?=\d+[.)]\s)", "\n", line)
         lines.extend(part.strip() for part in line.splitlines() if part.strip())
     return "\n".join(lines)
-
 
 def finalize_remote_result(
     result: NotebookAnalysisResult,

@@ -18,6 +18,14 @@ Rules:
   the correction unambiguous. Do not invent missing content.
 - Produce typed_text as clean, spaced study notes: preserve headings, use blank lines
   between sections, and put each detected numbered item on its own line as `1. text`.
+- Use a compact digital-notebook outline for typed_text: write a short heading on
+  its own line, then one `- ` bullet per distinct fact. Keep a person or concept
+  and its contribution on the same bullet using `Name ? contribution` when that
+  structure is visible in the notes. Put supporting detail on the next indented line.
+- Do not copy a long page summary into typed_text. page_summary is separate metadata.
+- Correct merged words and obvious OCR noise only when the image makes the intended
+  wording clear. If a fragment remains unreadable or is only OCR gibberish, omit it
+  rather than displaying it as a broken sentence.
 - Use the supplied OCR/layout regions as the primary evidence for bounding boxes.
 - Every region needs a concise label and a highlight_text phrase that appears verbatim
   in typed_text. highlight_text must be a key study concept of one to five words.

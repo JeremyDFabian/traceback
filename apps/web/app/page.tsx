@@ -68,6 +68,39 @@ type SourceStatus = "idle" | "loading" | "ready" | "unavailable";
 type Screen = "setup" | "processing" | "editor" | "trace" | "cards";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export function getRelevantSources(label: string, queries: string[] = []) {
+  const queryText = queries.find((query) => query.trim())?.trim() ?? label;
+  const query = encodeURIComponent(queryText);
+  const topic = `${label} ${queryText}`.toLocaleLowerCase();
+
+  if (/(bacteria|virus|microbe|infection|disease|medical|health|syphilis)/.test(topic)) {
+    return [
+      { title: `CDC resources on ${label}`, url: `https://search.cdc.gov/search/?query=${query}` },
+      { title: `PubMed research on ${label}`, url: `https://pubmed.ncbi.nlm.nih.gov/?term=${query}` },
+      { title: `NCBI Bookshelf on ${label}`, url: `https://www.ncbi.nlm.nih.gov/books/?term=${query}` },
+    ];
+  }
+  if (/(history|historical|jenner|semme|holmes|ehrlich)/.test(topic)) {
+    return [
+      { title: `Britannica on ${label}`, url: `https://www.britannica.com/search?query=${query}` },
+      { title: `NIH history resources on ${label}`, url: `https://www.nih.gov/search?query=${query}` },
+      { title: `National Library of Medicine on ${label}`, url: `https://www.nlm.nih.gov/search/?query=${query}` },
+    ];
+  }
+  if (/(cell|atp|mitochond|biology|genetic|pcr|dna|rna)/.test(topic)) {
+    return [
+      { title: `OpenStax on ${label}`, url: `https://openstax.org/search?query=${query}` },
+      { title: `Nature Education on ${label}`, url: `https://www.nature.com/search?q=${query}` },
+      { title: `Khan Academy on ${label}`, url: `https://www.khanacademy.org/search?page_search_query=${query}` },
+    ];
+  }
+  return [
+    { title: `Google Scholar research on ${label}`, url: `https://scholar.google.com/scholar?q=${query}` },
+    { title: `Britannica on ${label}`, url: `https://www.britannica.com/search?query=${query}` },
+    { title: `Wikipedia on ${label}`, url: `https://en.wikipedia.org/w/index.php?search=${query}` },
+  ];
+}
 const demoTypedText =
   "Cells make usable energy through cellular respiration. This process uses mitochondria to help produce ATP, the energy cells can use for work.";
 const seededRegions: Region[] = [
@@ -353,7 +386,94 @@ function NotebookPreview({
   );
 }
 
-export function InteractiveNotebookText({
+type StructuredNotebookItem = {
+  name?: string;
+  contribution: string;
+  support?: string;
+};
+
+type NotebookContentLayout = {
+  heading?: string;
+  items: StructuredNotebookItem[];
+};
+
+export function getNotebookHeading(text: string): string | undefined {
+  const match = text.match(/^\s*#\s*([^\n:]{2,80}):?\s*/);
+  return match?.[1].trim() || undefined;
+}
+
+function splitLongNotebookLine(line: string): string[] {
+  const words = line.split(/\s+/);
+  if (words.length < 18) return [line];
+
+  const chunks: string[] = [];
+  let chunk = "";
+  for (const word of words) {
+    if (chunk && `${chunk} ${word}`.length > 105) {
+      chunks.push(chunk);
+      chunk = word;
+      continue;
+    }
+    chunk = chunk ? `${chunk} ${word}` : word;
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks.map((part, index) => (index ? `- ${part}` : part));
+}
+
+function getReadableNotebookLines(text: string): string[] {
+  const withoutHashHeading = text.replace(/^\s*#\s*[^\n:]{2,80}:?\s*/, "");
+  return withoutHashHeading
+    .replace(/\s+(?=\d+[.)]\s+)/g, "\n")
+    .replace(/\s+-\s+(?=[A-Z])/g, "\n- ")
+    .replace(/([.!?])\s+(?=(?:[A-Z][A-Za-z ]{2,60}:|\d+[.)]))/g, "$1\n")
+    .split(/\n+/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .flatMap(splitLongNotebookLine);
+}
+
+export function getNotebookContentLayout(text: string): NotebookContentLayout | undefined {
+  const explicitHeading = getNotebookHeading(text);
+  const lines = getReadableNotebookLines(text);
+  if (lines.length < 2) return undefined;
+
+  const itemPattern = /^(?:[-*\u2022]|\d+[.)])\s+(.+)$/;
+  const nameAndContribution = /^(.{2,72}?)\s+(?:\u2014|\u2013|-|:)\s+(.+)$/;
+  const firstLineIsHeading =
+    !explicitHeading &&
+    !itemPattern.test(lines[0]) &&
+    !nameAndContribution.test(lines[0]) &&
+    !/[.!?]$/.test(lines[0]);
+  const heading = explicitHeading ?? (firstLineIsHeading ? lines.shift() : undefined);
+  const items: StructuredNotebookItem[] = [];
+
+  for (const line of lines) {
+    const bulletMatch = line.match(itemPattern);
+    const content = bulletMatch?.[1] ?? line;
+    const namedMatch = content.match(nameAndContribution);
+    if (namedMatch) {
+      items.push({
+        name: namedMatch[1].trim(),
+        contribution: namedMatch[2].trim(),
+      });
+      continue;
+    }
+    if (bulletMatch) {
+      items.push({ contribution: content });
+      continue;
+    }
+    if (items.length) {
+      const lastItem = items[items.length - 1];
+      lastItem.support = [lastItem.support, content].filter(Boolean).join(" ");
+      continue;
+    }
+    items.push({ contribution: content });
+  }
+
+  return items.length >= 2 ? { heading, items } : undefined;
+}
+
+function HighlightableNotebookText({
   text,
   regions,
   selectedId,
@@ -367,7 +487,7 @@ export function InteractiveNotebookText({
   const interactiveRegions = regions.filter((region) =>
     region.highlightText?.trim(),
   );
-  if (!interactiveRegions.length) return <p>{text}</p>;
+  if (!interactiveRegions.length) return <>{text}</>;
 
   const matches: Array<{ start: number; end: number; region: Region }> = [];
   const seenPhrases = new Set<string>();
@@ -383,11 +503,14 @@ export function InteractiveNotebookText({
       .split(/\s+/)
       .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
       .join("\\s+");
-    const match = new RegExp(`\\b${pattern}\\b`, "i").exec(text);
+    const match = new RegExp(
+      `(^|[^\\p{L}\\p{N}])(${pattern})(?=$|[^\\p{L}\\p{N}])`,
+      "iu",
+    ).exec(text);
     if (!match || match.index === undefined) continue;
 
-    const start = match.index;
-    const end = start + match[0].length;
+    const start = match.index + (match[1]?.length ?? 0);
+    const end = start + (match[2]?.length ?? 0);
     if (
       matches.some(
         (candidate) => start < candidate.end && end > candidate.start,
@@ -401,7 +524,7 @@ export function InteractiveNotebookText({
   matches.sort((first, second) => first.start - second.start);
 
   return (
-    <p>
+    <>
       {matches.map((match, index) => (
         <span key={match.region.id}>
           {text.slice(index ? matches[index - 1].end : 0, match.start)}
@@ -417,7 +540,71 @@ export function InteractiveNotebookText({
         </span>
       ))}
       {text.slice(matches.at(-1)?.end ?? 0)}
-    </p>
+    </>
+  );
+}
+
+export function InteractiveNotebookText({
+  text,
+  regions,
+  selectedId,
+  onSelect,
+  showHeading = true,
+}: {
+  text: string;
+  regions: Region[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  showHeading?: boolean;
+}) {
+  const layout = getNotebookContentLayout(text);
+  if (!layout) {
+    return (
+      <div className="notebook-plain-text">
+        {getReadableNotebookLines(text).map((line, index) => (
+          <p key={`${line}-${index}`}>
+            <HighlightableNotebookText
+              text={line}
+              regions={regions}
+              selectedId={selectedId}
+              onSelect={onSelect}
+            />
+          </p>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <section className="structured-notebook-text" aria-label="Extracted notebook notes">
+      {showHeading && layout.heading ? <h3>{layout.heading}</h3> : null}
+      <ul>
+        {layout.items.map((item, index) => (
+          <li key={`${item.name ?? item.contribution}-${index}`}>
+            <div>
+              {item.name ? <strong>{item.name}</strong> : null}
+              {item.name ? " \u2014 " : null}
+              <HighlightableNotebookText
+                text={item.contribution}
+                regions={regions}
+                selectedId={selectedId}
+                onSelect={onSelect}
+              />
+            </div>
+            {item.support ? (
+              <small>
+                <HighlightableNotebookText
+                  text={item.support}
+                  regions={regions}
+                  selectedId={selectedId}
+                  onSelect={onSelect}
+                />
+              </small>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -489,13 +676,13 @@ async function analyzeNotebook(file: File): Promise<PageAnalysis> {
 
 function isValidHighlightPhrase(phrase: string | undefined, typedText: string) {
   const normalizedPhrase = (phrase ?? "").trim().replace(/\s+/g, " ");
-  if (!normalizedPhrase || normalizedPhrase.split(" ").length > 5) return false;
+  if (!normalizedPhrase || normalizedPhrase.length > 200) return false;
 
   const pattern = normalizedPhrase
     .split(" ")
     .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     .join("\\s+");
-  return new RegExp(`\\b${pattern}\\b`, "i").test(typedText);
+  return new RegExp(pattern, "i").test(typedText);
 }
 
 function WhatIsTraceback() {
@@ -709,6 +896,11 @@ export default function Page() {
   const renderedTypedText = activeAnalysis
     ? activeAnalysis.typedText
     : editedDemoText;
+  const structuredNotebookLayout = getNotebookContentLayout(renderedTypedText);
+  const extractedNotebookHeading = getNotebookHeading(renderedTypedText);
+  const useCompactNotebookTitle =
+    Boolean(structuredNotebookLayout || extractedNotebookHeading) ||
+    renderedTypedText.length > 160;
   const hasUnsafeHighlightFallback = Boolean(
     activeAnalysis?.warnings.includes(
       "interactive_highlights_unavailable_showing_plain_ocr",
@@ -722,8 +914,9 @@ export default function Page() {
     regions.every((region) =>
       isValidHighlightPhrase(region.highlightText, renderedTypedText),
     );
-  const visibleSources =
-    conceptDetails?.sources ?? selected?.referenceLinks ?? [];
+  const visibleSources = selected
+    ? getRelevantSources(selected.label, selected.trustedSourceQueries)
+    : conceptDetails?.sources ?? [];
 
   useEffect(
     () => () => {
@@ -1486,7 +1679,26 @@ export default function Page() {
               </header>
               <div className="pdf-page-content">
                 <p className="pdf-kicker">EXTRACTED FROM YOUR NOTEBOOK</p>
-                <h2>{activeAnalysis?.pageSummary ?? "Cellular respiration"}</h2>
+                <h2
+                  className={
+                    useCompactNotebookTitle
+                      ? "structured-note-page-title"
+                      : undefined
+                  }
+                  onMouseUp={isAnnotating ? captureNoteSelection : undefined}
+                >
+                  <HighlightableNotebookText
+                    text={
+                      structuredNotebookLayout?.heading ??
+                      extractedNotebookHeading ??
+                      activeAnalysis?.pageSummary ??
+                      "Cellular respiration"
+                    }
+                    regions={regions}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                  />
+                </h2>
                 {isEditingNotes ? (
                   <>
                     <p className="edit-note-helper">
@@ -1527,6 +1739,7 @@ export default function Page() {
                       regions={regions}
                       selectedId={selectedId}
                       onSelect={setSelectedId}
+                      showHeading={false}
                     />
                   </div>
                 )}

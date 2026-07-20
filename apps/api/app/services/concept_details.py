@@ -55,13 +55,14 @@ def get_concept_details(
         analysis = analyze_concept_with_gemini(request, active_settings)
     else:
         return build_fallback_result(
+            request,
             request.label,
             sources,
             "remote_concept_details_disabled_using_search_links",
         )
 
     if analysis.details is None:
-        return build_fallback_result(request.label, sources, *analysis.warnings)
+        return build_fallback_result(request, request.label, sources, *analysis.warnings)
 
     return ConceptDetailsResult(
         label=request.label,
@@ -153,33 +154,111 @@ def analyze_concept_with_gemini(
 def build_search_sources(label: str, queries: list[str] | None = None) -> list[ConceptSource]:
     query_text = next((query.strip() for query in queries or [] if query.strip()), label)
     query = quote_plus(query_text)
+    topic = f"{label} {query_text}".casefold()
+
+    if any(
+        term in topic
+        for term in (
+            "bacteria",
+            "virus",
+            "microbe",
+            "infection",
+            "disease",
+            "medical",
+            "health",
+            "syphilis",
+        )
+    ):
+        return [
+            ConceptSource(
+                title=f"CDC resources on {label}",
+                url=f"https://search.cdc.gov/search/?query={query}",
+            ),
+            ConceptSource(
+                title=f"PubMed research on {label}",
+                url=f"https://pubmed.ncbi.nlm.nih.gov/?term={query}",
+            ),
+            ConceptSource(
+                title=f"NCBI Bookshelf on {label}",
+                url=f"https://www.ncbi.nlm.nih.gov/books/?term={query}",
+            ),
+        ]
+
+    if any(
+        term in topic for term in ("history", "historical", "jenner", "semme", "holmes", "ehrlich")
+    ):
+        return [
+            ConceptSource(
+                title=f"Britannica on {label}",
+                url=f"https://www.britannica.com/search?query={query}",
+            ),
+            ConceptSource(
+                title=f"NIH history resources on {label}",
+                url=f"https://www.nih.gov/search?query={query}",
+            ),
+            ConceptSource(
+                title=f"National Library of Medicine on {label}",
+                url=f"https://www.nlm.nih.gov/search/?query={query}",
+            ),
+        ]
+
+    if any(
+        term in topic
+        for term in ("cell", "atp", "mitochond", "biology", "genetic", "pcr", "dna", "rna")
+    ):
+        return [
+            ConceptSource(
+                title=f"OpenStax on {label}", url=f"https://openstax.org/search?query={query}"
+            ),
+            ConceptSource(
+                title=f"Nature Education on {label}", url=f"https://www.nature.com/search?q={query}"
+            ),
+            ConceptSource(
+                title=f"Khan Academy on {label}",
+                url=f"https://www.khanacademy.org/search?page_search_query={query}",
+            ),
+        ]
+
     return [
         ConceptSource(
-            title=f"Search OpenStax for {label}",
-            url=f"https://openstax.org/search?query={query}",
+            title=f"Google Scholar research on {label}",
+            url=f"https://scholar.google.com/scholar?q={query}",
         ),
         ConceptSource(
-            title=f"Search Khan Academy for {label}",
-            url=f"https://www.khanacademy.org/search?page_search_query={query}",
+            title=f"Britannica on {label}", url=f"https://www.britannica.com/search?query={query}"
         ),
         ConceptSource(
-            title=f"Search Wikipedia for {label}",
+            title=f"Wikipedia on {label}",
             url=f"https://en.wikipedia.org/w/index.php?search={query}",
         ),
     ]
 
 
 def build_fallback_result(
+    request: ConceptDetailsRequest,
     label: str,
     sources: list[ConceptSource],
     *warnings: str,
 ) -> ConceptDetailsResult:
+    context_sentence = next(
+        (
+            sentence.strip()
+            for sentence in (request.transcription or "").replace("\n", " ").split(".")
+            if label.casefold() in sentence.casefold()
+        ),
+        "",
+    )
+    definition = (
+        f"In your notes: {context_sentence}."
+        if context_sentence
+        else (
+            f"{label} is the phrase you selected from your notes. "
+            "Use the reference links to explore it further."
+        )
+    )
     return ConceptDetailsResult(
         label=label,
-        definition=(
-            "An AI explanation is unavailable right now. "
-            "Use the reference links to study this concept."
-        ),
+        definition=definition,
         key_points=[],
         sources=sources,
         confidence=0.0,

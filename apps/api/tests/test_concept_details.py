@@ -23,6 +23,23 @@ def test_concept_details_uses_safe_search_fallback() -> None:
     assert result.sources[0].url.endswith("Mitochondria")
 
 
+def test_concept_details_uses_the_selected_note_as_a_fallback_definition() -> None:
+    result = get_concept_details(
+        ConceptDetailsRequest(
+            label="Bounding boxes",
+            transcription="Bounding boxes describe the area around a selected item.",
+        ),
+        Settings(
+            database_url="postgresql://test:test@localhost:5432/traceback",
+            analysis_engine="local",
+        ),
+    )
+
+    assert result.definition == (
+        "In your notes: Bounding boxes describe the area around a selected item."
+    )
+
+
 def test_concept_details_endpoint_returns_contract() -> None:
     response = TestClient(app).post(
         "/api/concept-details",
@@ -64,8 +81,24 @@ def test_concept_details_uses_precomputed_terra_explanation_and_approved_sources
     assert result.definition == "Mitochondria help cells produce usable energy."
     assert result.warnings == ["precomputed_terra_explanation_used"]
     assert [source.title for source in result.sources] == [
-        "Search OpenStax for Mitochondria",
-        "Search Khan Academy for Mitochondria",
-        "Search Wikipedia for Mitochondria",
+        "OpenStax on Mitochondria",
+        "Nature Education on Mitochondria",
+        "Khan Academy on Mitochondria",
     ]
     assert all("mitochondria+cellular+energy" in source.url for source in result.sources)
+
+
+def test_concept_details_uses_medical_sources_for_microbiology() -> None:
+    result = get_concept_details(
+        ConceptDetailsRequest(label="Microbes are ubiquitous"),
+        Settings(
+            database_url="postgresql://test:test@localhost:5432/traceback",
+            analysis_engine="local",
+        ),
+    )
+
+    assert [source.title for source in result.sources] == [
+        "CDC resources on Microbes are ubiquitous",
+        "PubMed research on Microbes are ubiquitous",
+        "NCBI Bookshelf on Microbes are ubiquitous",
+    ]
