@@ -1,11 +1,13 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FlashcardReview } from "./flashcard-review";
 import {
   analyzeNotebook,
   confirmAnalysis,
   createSession,
   extractDeck,
+  generateGroundedFlashcards,
   matchRegion,
   saveAnalysis,
   toConfirmedAnalysis,
@@ -14,6 +16,7 @@ import {
   uploadNotebookPage,
   type StoredAnalysis,
   type MatchResult,
+  type ReviewFlashcard,
   type VisionRegion,
 } from "./session-api";
 
@@ -37,26 +40,6 @@ export type Region = {
   referenceLinks?: Array<{ title: string; url: string }>;
 };
 
-type ApiNotebookRegion = {
-  id: string;
-  label: string;
-  highlight_text: string;
-  transcription: string;
-  type: "concept" | "definition" | "question" | "example" | "other";
-  bbox: { x: number; y: number; width: number; height: number };
-  markers: Array<"star" | "question" | "highlight" | "circle">;
-  confidence: number;
-  explanation: string;
-  trusted_source_queries: string[];
-};
-
-type ApiNotebookAnalysis = {
-  page_summary: string;
-  typed_text: string;
-  regions: ApiNotebookRegion[];
-  warnings: string[];
-};
-
 type PageAnalysis = {
   pageSummary: string;
   typedText: string;
@@ -70,108 +53,11 @@ type ConceptDetails = {
   sources: Array<{ title: string; url: string }>;
 };
 
-type NotebookFlashcard = {
-  id: string;
-  question: string;
-  answer: string;
-  difficulty: "easy" | "medium" | "hard";
-  source_phrase?: string;
-  included: boolean;
-};
-
 type SourceStatus = "idle" | "loading" | "ready" | "unavailable";
 
 type Screen = "setup" | "processing" | "editor" | "trace" | "cards";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const demoTypedText =
-  "Cells make usable energy through cellular respiration. This process uses mitochondria to help produce ATP, the energy cells can use for work.";
-const seededRegions: Region[] = [
-  {
-    id: "mitochondria",
-    label: "Mitochondria",
-    highlightText: "mitochondria",
-    highlightColor: "yellow",
-    type: "concept",
-    x: 12,
-    y: 24,
-    width: 34,
-    height: 10,
-    confidence: 96,
-    explanation:
-      "Mitochondria are the parts of a cell where most aerobic respiration happens.",
-    trustedSourceQueries: [
-      "mitochondria structure and function",
-      "mitochondria aerobic respiration",
-    ],
-    referenceLinks: [
-      {
-        title: "Mitochondria · OpenStax",
-        url: "https://openstax.org/books/biology-2e/pages/4-3-eukaryotic-cells",
-      },
-      {
-        title: "Mitochondrion · Wikipedia",
-        url: "https://en.wikipedia.org/wiki/Mitochondrion",
-      },
-    ],
-  },
-  {
-    id: "atp",
-    label: "ATP",
-    highlightText: "ATP",
-    highlightColor: "blue",
-    type: "concept",
-    x: 56,
-    y: 45,
-    width: 19,
-    height: 10,
-    marker: "star",
-    confidence: 91,
-    explanation:
-      "ATP is the energy-carrying molecule cells use to power most of their work.",
-    trustedSourceQueries: ["ATP cellular energy", "ATP structure and function"],
-    referenceLinks: [
-      {
-        title: "ATP and energy · Khan Academy",
-        url: "https://www.khanacademy.org/science/biology/cellular-respiration-and-fermentation/atp-structure-and-hydrolysis/a/adenosine-triphosphate",
-      },
-      {
-        title: "Adenosine triphosphate · Wikipedia",
-        url: "https://en.wikipedia.org/wiki/Adenosine_triphosphate",
-      },
-    ],
-  },
-  {
-    id: "respiration",
-    label: "Cellular respiration",
-    highlightText: "cellular respiration",
-    highlightColor: "pink",
-    type: "definition",
-    x: 23,
-    y: 66,
-    width: 47,
-    height: 10,
-    marker: "question",
-    confidence: 84,
-    explanation:
-      "Cellular respiration releases usable energy from food and stores it in ATP.",
-    trustedSourceQueries: [
-      "cellular respiration overview biology",
-      "cellular respiration ATP production",
-    ],
-    referenceLinks: [
-      {
-        title: "Cellular respiration · OpenStax",
-        url: "https://openstax.org/books/biology-2e/pages/7-1-energy-in-living-systems",
-      },
-      {
-        title: "Cellular respiration · Khan Academy",
-        url: "https://www.khanacademy.org/science/biology/cellular-respiration-and-fermentation",
-      },
-    ],
-  },
-];
-
 const stages = [
   "Creating session",
   "Uploading lecture",
@@ -205,16 +91,10 @@ function UploadField({
         {accept === "application/pdf" ? "↗" : "⌁"}
       </span>
       <span>
-        <strong>
-          {file ? `${file.name} selected` : label}
-        </strong>
-        <small>
-          {file ? "Choose again to replace this file." : detail}
-        </small>
+        <strong>{file ? `${file.name} selected` : label}</strong>
+        <small>{file ? "Choose again to replace this file." : detail}</small>
       </span>
-      <span className="upload-action">
-        {file ? "Replace" : "Choose"}
-      </span>
+      <span className="upload-action">{file ? "Replace" : "Choose"}</span>
     </label>
   );
 }
@@ -671,7 +551,6 @@ export default function Page() {
   const [stage, setStage] = useState(0);
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [approved, setApproved] = useState<string[]>([]);
   const [pageAnalysis, setPageAnalysis] = useState<PageAnalysis>();
   const [confirmedAnalysis, setConfirmedAnalysis] = useState<StoredAnalysis>();
   const [matchResults, setMatchResults] = useState<Record<string, MatchResult>>(
@@ -696,10 +575,11 @@ export default function Page() {
     x: number;
     y: number;
   }>();
-  const [flashcards, setFlashcards] = useState<NotebookFlashcard[]>([]);
+  const [flashcards, setFlashcards] = useState<ReviewFlashcard[]>([]);
+  const [reviewStatus, setReviewStatus] = useState("");
+  const manualRegionCount = useRef(0);
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [flashcardError, setFlashcardError] = useState<string>();
-  const [isFlashcardDrawerOpen, setIsFlashcardDrawerOpen] = useState(false);
   const selected = useMemo(
     () => regions.find((region) => region.id === selectedId) ?? regions[0],
     [regions, selectedId],
@@ -727,6 +607,15 @@ export default function Page() {
       (match.status === "uncertain" &&
         approvedUncertainRegionIds.includes(match.region_id)),
   );
+  const eligibleRegions =
+    confirmedAnalysis?.regions.filter((region) => {
+      const match = matchResults[region.id];
+      return (
+        match?.status === "matched" ||
+        (match?.status === "uncertain" &&
+          approvedUncertainRegionIds.includes(region.id))
+      );
+    }) ?? [];
 
   useEffect(
     () => () => {
@@ -735,15 +624,24 @@ export default function Page() {
     [imageUrl],
   );
   useEffect(() => {
+    document
+      .querySelector<HTMLElement>("[data-screen-heading]")
+      ?.focus({ preventScroll: true });
+  }, [screen]);
+  useEffect(() => {
     if (screen !== "trace" || !selected) {
-      setConceptDetails(undefined);
-      setSourceStatus("idle");
-      return;
+      const resetStatus = window.setTimeout(() => {
+        setConceptDetails(undefined);
+        setSourceStatus("idle");
+      }, 0);
+      return () => window.clearTimeout(resetStatus);
     }
 
     const controller = new AbortController();
-    setConceptDetails(undefined);
-    setSourceStatus("loading");
+    const markLoading = window.setTimeout(() => {
+      setConceptDetails(undefined);
+      setSourceStatus("loading");
+    }, 0);
     void fetch(`${apiBaseUrl}/api/concept-details`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -771,7 +669,10 @@ export default function Page() {
         }
       });
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(markLoading);
+      controller.abort();
+    };
   }, [screen, selected]);
 
   function selectNotebook(event: ChangeEvent<HTMLInputElement>) {
@@ -950,7 +851,8 @@ export default function Page() {
       );
       setSelectedId(existing.id);
     } else {
-      const id = `manual-${Date.now()}`;
+      manualRegionCount.current += 1;
+      const id = `manual-${manualRegionCount.current}`;
       setRegions((current) => [
         ...current,
         {
@@ -976,38 +878,41 @@ export default function Page() {
     window.getSelection()?.removeAllRanges();
   }
   async function generateFlashcards() {
+    if (!sessionId || !eligibleRegions.length) return;
     setFlashcardError(undefined);
     setIsGeneratingFlashcards(true);
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/api/notebook-flashcards/generate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            typed_text: renderedTypedText,
-            highlights: regions.flatMap((region) => {
-              const phrase = region.highlightText?.trim();
-              return phrase ? [{ id: region.id, phrase }] : [];
-            }),
-            count: 5,
-          }),
-        },
+      const batches = await Promise.all(
+        eligibleRegions.map((region) => {
+          const match = matchResults[region.id];
+          if (
+            !match ||
+            match.slide_number === null ||
+            !match.passage ||
+            !match.highlight_boxes.length
+          ) {
+            throw new Error("A selected match is missing source coordinates.");
+          }
+          return generateGroundedFlashcards({
+            count: 1,
+            source: {
+              session_id: sessionId,
+              region_id: region.id,
+              slide_number: match.slide_number,
+              note_text: region.transcription,
+              slide_text: match.passage,
+              highlight_boxes: match.highlight_boxes,
+            },
+          });
+        }),
       );
-      if (!response.ok)
-        throw new Error("Traceback could not generate flashcards.");
-      const payload = (await response.json()) as {
-        flashcards: Omit<NotebookFlashcard, "included">[];
-      };
-      setFlashcards(
-        payload.flashcards.map((card) => ({ ...card, included: true })),
-      );
-      setIsFlashcardDrawerOpen(true);
+      setFlashcards(batches.flatMap(({ flashcards }) => flashcards));
+      setScreen("cards");
     } catch (error) {
       setFlashcardError(
         error instanceof Error
           ? error.message
-          : "Traceback could not generate flashcards.",
+          : "Traceback could not generate grounded flashcards.",
       );
     } finally {
       setIsGeneratingFlashcards(false);
@@ -1481,9 +1386,7 @@ export default function Page() {
             >
               <header>
                 <span>TRACEBACK PDF</span>
-                <span>
-                  Page 1 of 1
-                </span>
+                <span>Page 1 of 1</span>
               </header>
               <div className="pdf-page-content">
                 <p className="pdf-kicker">EXTRACTED FROM YOUR NOTEBOOK</p>
@@ -1690,175 +1593,48 @@ export default function Page() {
             </div>
           ) : null}
           {flashcardError ? (
-            <p className="flashcard-error">{flashcardError}</p>
+            <p className="flashcard-error" aria-live="polite">
+              {flashcardError}
+            </p>
           ) : null}
         </section>
       )}
 
-      {isFlashcardDrawerOpen ? (
-        <div
-          className="flashcard-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Review flashcards"
-        >
-          <div className="flashcard-drawer">
-            <header>
-              <div>
-                <p className="eyebrow">Study cards from your notes</p>
-                <h2>Review flashcards</h2>
-              </div>
-              <button
-                className="text-button"
-                onClick={() => setIsFlashcardDrawerOpen(false)}
-              >
-                Close
-              </button>
-            </header>
-            <p className="flashcard-drawer-copy">
-              Edit a card, remove any you do not want, then save the set for
-              this session.
-            </p>
-            <div className="notebook-flashcards">
-              {flashcards.map((card) => (
-                <article
-                  key={card.id}
-                  className={card.included ? "" : "excluded"}
-                >
-                  <label>
-                    Question
-                    <textarea
-                      value={card.question}
-                      onChange={(event) =>
-                        setFlashcards((current) =>
-                          current.map((item) =>
-                            item.id === card.id
-                              ? { ...item, question: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label>
-                    Answer
-                    <textarea
-                      value={card.answer}
-                      onChange={(event) =>
-                        setFlashcards((current) =>
-                          current.map((item) =>
-                            item.id === card.id
-                              ? { ...item, answer: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <footer>
-                    <span>
-                      {card.source_phrase
-                        ? `From “${card.source_phrase}”`
-                        : "From your notes"}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() =>
-                        setFlashcards((current) =>
-                          current.map((item) =>
-                            item.id === card.id
-                              ? { ...item, included: !item.included }
-                              : item,
-                          ),
-                        )
-                      }
-                    >
-                      {card.included ? "Remove" : "Include"}
-                    </button>
-                  </footer>
-                </article>
-              ))}
-            </div>
-            <footer className="flashcard-drawer-footer">
-              <span>
-                {flashcards.filter((card) => card.included).length} cards ready
-              </span>
-              <button
-                className="primary-button"
-                onClick={() => setIsFlashcardDrawerOpen(false)}
-              >
-                Save cards
-              </button>
-            </footer>
-          </div>
-        </div>
-      ) : null}
-
-      {screen === "cards" && (
+      {screen === "cards" ? (
         <section className="cards-view">
           <header className="trace-header">
             <div>
-              <p className="eyebrow">Saved annotations</p>
-              <h1>
-                Keep useful links
-                <br />
-                <em>close to your notes.</em>
+              <p className="eyebrow">Grounded study cards</p>
+              <h1 data-screen-heading tabIndex={-1}>
+                Review every generated card.
               </h1>
             </div>
             <button
+              type="button"
               className="secondary-button"
               onClick={() => setScreen("trace")}
             >
               ← Back to interactive PDF
             </button>
           </header>
-          <div className="cards-grid">
-            {regions
-              .filter((region) => region.marker)
-              .map((region) => (
-                <article
-                  key={region.id}
-                  className={`study-card ${approved.includes(region.id) ? "approved" : ""}`}
-                >
-                  <div className="card-top">
-                    <span>
-                      {region.marker === "star"
-                        ? "★ Important topic"
-                        : "? Explore later"}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setApproved((current) =>
-                          current.includes(region.id)
-                            ? current.filter((id) => id !== region.id)
-                            : [...current, region.id],
-                        )
-                      }
-                    >
-                      {approved.includes(region.id) ? "Saved ✓" : "Save"}
-                    </button>
-                  </div>
-                  <p className="card-prompt">
-                    Learn more about <b>{region.label}</b>.
-                  </p>
-                  <div className="card-answer">
-                    Open the explanation and links attached to this highlighted
-                    phrase in your interactive PDF.
-                  </div>
-                  <footer>
-                    Interactive PDF annotation · Edit before saving
-                  </footer>
-                </article>
-              ))}
-            {regions.filter((region) => region.marker).length === 0 ? (
-              <p className="empty-cards">
-                Select a highlighted phrase in the PDF to save it for later.
-              </p>
-            ) : null}
-          </div>
+          <FlashcardReview
+            key={flashcards.map(({ id }) => id).join(":")}
+            cards={flashcards}
+            onComplete={(approvedCards) => {
+              setFlashcards(approvedCards);
+              setReviewStatus(
+                `${approvedCards.length} ${
+                  approvedCards.length === 1 ? "card" : "cards"
+                } approved.`,
+              );
+              setScreen("trace");
+            }}
+          />
         </section>
-      )}
+      ) : null}
+      <p className="sr-only" aria-live="polite">
+        {reviewStatus}
+      </p>
     </main>
   );
 }

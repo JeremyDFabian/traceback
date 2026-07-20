@@ -1,9 +1,4 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Page, { InteractiveNotebookText, type Region } from "./page";
@@ -70,9 +65,7 @@ const stored: StoredAnalysis = {
 function selectRequiredFiles() {
   fireEvent.change(screen.getByLabelText(/choose lecture pdf/i), {
     target: {
-      files: [
-        new File(["pdf"], "lecture.pdf", { type: "application/pdf" }),
-      ],
+      files: [new File(["pdf"], "lecture.pdf", { type: "application/pdf" })],
     },
   });
   fireEvent.change(screen.getByLabelText(/choose notebook image/i), {
@@ -169,9 +162,7 @@ describe("home page", () => {
 
     fireEvent.change(screen.getByLabelText(/choose lecture pdf/i), {
       target: {
-        files: [
-          new File(["pdf"], "lecture.pdf", { type: "application/pdf" }),
-        ],
+        files: [new File(["pdf"], "lecture.pdf", { type: "application/pdf" })],
       },
     });
     expect(start).toBeDisabled();
@@ -226,6 +217,23 @@ describe("home page", () => {
       similarity_score: 0.15,
       reason: "The slide is the best lexical match, but the score is low.",
     });
+    vi.spyOn(sessionApi, "generateGroundedFlashcards").mockResolvedValue({
+      flashcards: [
+        {
+          id: "00000000-0000-4000-8000-000000000010",
+          question: "What produces ATP?",
+          answer: "Mitochondria",
+          difficulty: "easy",
+          source: {
+            session_id: session.id,
+            region_id: "region-1",
+            slide_number: 2,
+            slide_text: "Mitochondria produce ATP.",
+            highlight_boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
+          },
+        },
+      ],
+    });
 
     render(<Page />);
     selectRequiredFiles();
@@ -252,5 +260,18 @@ describe("home page", () => {
     expect(
       screen.getByRole("button", { name: /generate flashcards/i }),
     ).toBeEnabled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /generate flashcards/i }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Review flashcards" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Review every generated card." }),
+    ).toHaveFocus();
+    expect(screen.getByDisplayValue("What produces ATP?")).toBeInTheDocument();
+    expect(screen.getByText("Mitochondria produce ATP.")).toBeInTheDocument();
+    expect(screen.getByText(/x 10%/i)).toBeInTheDocument();
   });
 });
