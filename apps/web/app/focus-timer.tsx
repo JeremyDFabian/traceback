@@ -55,11 +55,19 @@ export function FocusTimer() {
 
   function drag(event: PointerEvent<HTMLElement>) {
     if (!dragStart.current) return;
-    const nextX = dragStart.current.offsetX + event.clientX - dragStart.current.x;
-    const nextY = dragStart.current.offsetY + event.clientY - dragStart.current.y;
+    const nextX =
+      dragStart.current.offsetX + event.clientX - dragStart.current.x;
+    const nextY =
+      dragStart.current.offsetY + event.clientY - dragStart.current.y;
     setOffset({
-      x: Math.max(-window.innerWidth + 78, Math.min(window.innerWidth - 78, nextX)),
-      y: Math.max(-window.innerHeight + 74, Math.min(window.innerHeight - 74, nextY)),
+      x: Math.max(
+        -window.innerWidth + 78,
+        Math.min(window.innerWidth - 78, nextX),
+      ),
+      y: Math.max(
+        -window.innerHeight + 74,
+        Math.min(window.innerHeight - 74, nextY),
+      ),
     });
   }
 
@@ -69,20 +77,30 @@ export function FocusTimer() {
       aria-label="Draggable Pomodoro focus timer"
       onPointerDown={beginDrag}
       onPointerMove={drag}
-      onPointerUp={() => { dragStart.current = undefined; }}
-      onPointerCancel={() => { dragStart.current = undefined; }}
+      onPointerUp={() => {
+        dragStart.current = undefined;
+      }}
+      onPointerCancel={() => {
+        dragStart.current = undefined;
+      }}
       style={{ transform: `translate3d(${offset.x}px, ${offset.y}px, 0)` }}
     >
       <div className="focus-timer-heading">
         <span aria-hidden="true">⠿</span>
         <p>{mode === "focus" ? "Focus session" : "Short break"}</p>
       </div>
-      <strong aria-live="polite">{minutes}:{seconds}</strong>
+      <strong aria-live="polite">
+        {minutes}:{seconds}
+      </strong>
       <div>
         <button type="button" className="text-button" onClick={toggleMode}>
           {mode === "focus" ? "Break" : "Focus"}
         </button>
-        <button type="button" className="focus-timer-start" onClick={() => setIsRunning((running) => !running)}>
+        <button
+          type="button"
+          className="focus-timer-start"
+          onClick={() => setIsRunning((running) => !running)}
+        >
           {isRunning ? "Pause" : "Start"}
         </button>
       </div>

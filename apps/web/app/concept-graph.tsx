@@ -106,8 +106,10 @@ export function ConceptGraph({
     .filter(
       (
         connection,
-      ): connection is { node: ConceptGraphData["nodes"][number]; relation: string } =>
-        Boolean(connection),
+      ): connection is {
+        node: ConceptGraphData["nodes"][number];
+        relation: string;
+      } => Boolean(connection),
     );
   const reviewCount = graph.edges.filter((edge) => edge.review_required).length;
 
@@ -215,7 +217,10 @@ export function ConceptGraph({
               <ul>
                 {connections.map(({ node, relation }) => (
                   <li key={node.id}>
-                    <button type="button" onClick={() => setSelectedId(node.id)}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(node.id)}
+                    >
                       {node.label}
                     </button>
                     <small>{relation}</small>

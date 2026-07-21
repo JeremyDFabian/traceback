@@ -42,7 +42,11 @@ function loadDeck(): SavedDeck {
 
   try {
     const saved = JSON.parse(window.localStorage.getItem(storageKey) ?? "null");
-    if (saved && Array.isArray(saved.cards) && typeof saved.results === "object") {
+    if (
+      saved &&
+      Array.isArray(saved.cards) &&
+      typeof saved.results === "object"
+    ) {
       return {
         cards: saved.cards,
         results: saved.results,
@@ -50,7 +54,9 @@ function loadDeck(): SavedDeck {
       };
     }
 
-    const legacy = JSON.parse(window.localStorage.getItem(legacyStorageKey) ?? "{}");
+    const legacy = JSON.parse(
+      window.localStorage.getItem(legacyStorageKey) ?? "{}",
+    );
     if (Array.isArray(legacy.cards) && typeof legacy.results === "object") {
       return { cards: legacy.cards, results: legacy.results, studySets: [] };
     }
@@ -73,11 +79,16 @@ export function FlashcardStudyDeck({
   studySet?: StudySetInput;
   onClose: () => void;
   onOpenStudySet?: (studySet: SavedStudySet, cards: StudyCard[]) => void;
-  onShareStudySet?: (studySet: SavedStudySet, cards: StudyCard[]) => Promise<string>;
+  onShareStudySet?: (
+    studySet: SavedStudySet,
+    cards: StudyCard[],
+  ) => Promise<string>;
   initialMode?: "library" | "review";
 }) {
   const [deck, setDeck] = useState<SavedDeck>(loadDeck);
-  const [activeSetId, setActiveSetId] = useState<string | undefined>(studySet?.id);
+  const [activeSetId, setActiveSetId] = useState<string | undefined>(
+    studySet?.id,
+  );
   const [isReviewing, setIsReviewing] = useState(initialMode === "review");
   const [isFlipped, setIsFlipped] = useState(false);
   const [dragX, setDragX] = useState(0);
@@ -117,7 +128,9 @@ export function FlashcardStudyDeck({
       const existing = new Map(current.cards.map((card) => [card.id, card]));
       const incomingIds = new Set(incoming.map((card) => card.id));
       const nextCards = incoming.map((card) => existing.get(card.id) ?? card);
-      const retainedCards = current.cards.filter((card) => !incomingIds.has(card.id));
+      const retainedCards = current.cards.filter(
+        (card) => !incomingIds.has(card.id),
+      );
       const nextStudySets = studySet
         ? [
             { ...studySet, savedAt: new Date().toISOString() },
@@ -182,7 +195,9 @@ export function FlashcardStudyDeck({
           (studySet) => studySet.id !== studySetToDelete.id,
         ),
         results: Object.fromEntries(
-          Object.entries(current.results).filter(([cardId]) => !deletedCardIds.has(cardId)),
+          Object.entries(current.results).filter(
+            ([cardId]) => !deletedCardIds.has(cardId),
+          ),
         ),
       };
     });
@@ -288,14 +303,21 @@ export function FlashcardStudyDeck({
   }
 
   return (
-    <div className="flashcard-modal" role="dialog" aria-modal="true" aria-label="Study deck">
+    <div
+      className="flashcard-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Study deck"
+    >
       <section className="flashcard-drawer study-deck">
         <header>
           <div>
             <p className="eyebrow">Saved study sets</p>
             <h2>Learn it. Recall it.</h2>
           </div>
-          <button className="text-button" onClick={onClose}>Close</button>
+          <button className="text-button" onClick={onClose}>
+            Close
+          </button>
         </header>
 
         {!isReviewing ? (
@@ -309,12 +331,22 @@ export function FlashcardStudyDeck({
                 return (
                   <article key={savedSet.id} className="study-set-card">
                     <div className="study-set-summary">
-                      <p>{savedSet.pages.length} {savedSet.pages.length === 1 ? "page" : "pages"} · {savedCards.length} cards</p>
+                      <p>
+                        {savedSet.pages.length}{" "}
+                        {savedSet.pages.length === 1 ? "page" : "pages"} ·{" "}
+                        {savedCards.length} cards
+                      </p>
                       <h3>{savedSet.title}</h3>
-                      <small>Notes, original pages, and flashcards saved together · {new Date(savedSet.savedAt).toLocaleDateString()}</small>
+                      <small>
+                        Notes, original pages, and flashcards saved together ·{" "}
+                        {new Date(savedSet.savedAt).toLocaleDateString()}
+                      </small>
                     </div>
                     <div className="study-set-actions">
-                      <button type="button" onClick={() => openStudySet(savedSet)}>
+                      <button
+                        type="button"
+                        onClick={() => openStudySet(savedSet)}
+                      >
                         Open notes →
                       </button>
                       {savedCards.length ? (
@@ -335,7 +367,9 @@ export function FlashcardStudyDeck({
                         disabled={sharingSetId === savedSet.id}
                         onClick={() => void shareStudySet(savedSet)}
                       >
-                        {sharingSetId === savedSet.id ? "Creating link…" : "Share set"}
+                        {sharingSetId === savedSet.id
+                          ? "Creating link…"
+                          : "Share set"}
                       </button>
                     </div>
                     {sharedSetId === savedSet.id && shareUrl ? (
@@ -346,13 +380,18 @@ export function FlashcardStudyDeck({
                           value={shareUrl}
                           onFocus={(event) => event.currentTarget.select()}
                         />
-                        <button type="button" onClick={() => void copyShareLink()}>
+                        <button
+                          type="button"
+                          onClick={() => void copyShareLink()}
+                        >
                           Copy link
                         </button>
                       </div>
                     ) : null}
                     {sharedSetId === savedSet.id && shareMessage ? (
-                      <p className="share-status" role="status">{shareMessage}</p>
+                      <p className="share-status" role="status">
+                        {shareMessage}
+                      </p>
                     ) : null}
                     <div className="study-set-delete-row">
                       <button
@@ -371,14 +410,20 @@ export function FlashcardStudyDeck({
             <div className="study-empty">
               <p className="eyebrow">No study sets yet</p>
               <h3>Scan notes, then make them yours.</h3>
-              <p>Each generated set keeps its interactive notes, uploaded pages, and flashcards together.</p>
+              <p>
+                Each generated set keeps its interactive notes, uploaded pages,
+                and flashcards together.
+              </p>
             </div>
           )
         ) : !setCards.length ? (
           <div className="study-empty">
             <p className="eyebrow">Nothing saved yet</p>
             <h3>Generate cards from your notes first.</h3>
-            <p>Your notes and flashcards will stay together on this device for your next review.</p>
+            <p>
+              Your notes and flashcards will stay together on this device for
+              your next review.
+            </p>
           </div>
         ) : active ? (
           <>
@@ -387,16 +432,25 @@ export function FlashcardStudyDeck({
               <span>{known} learned</span>
             </div>
             <div className="study-card-stack" aria-label="Flashcard stack">
-              {dueCards.slice(1, 3).reverse().map((card, index) => (
-                <div className={`study-card-shadow shadow-${index + 1}`} key={card.id} />
-              ))}
+              {dueCards
+                .slice(1, 3)
+                .reverse()
+                .map((card, index) => (
+                  <div
+                    className={`study-card-shadow shadow-${index + 1}`}
+                    key={card.id}
+                  />
+                ))}
               <button
                 className={`study-card ${isFlipped ? "is-flipped" : ""}`}
                 type="button"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
-                onPointerCancel={() => { dragStart.current = undefined; setDragX(0); }}
+                onPointerCancel={() => {
+                  dragStart.current = undefined;
+                  setDragX(0);
+                }}
                 onClick={() => {
                   if (hasSwiped.current) {
                     hasSwiped.current = false;
@@ -404,37 +458,90 @@ export function FlashcardStudyDeck({
                   }
                   setIsFlipped((current) => !current);
                 }}
-                style={{ transform: `translateX(${dragX}px) rotate(${dragX / 18}deg)` }}
-                aria-label={isFlipped ? "Flashcard answer. Tap to show question." : "Flashcard question. Tap to reveal answer."}
+                style={{
+                  transform: `translateX(${dragX}px) rotate(${dragX / 18}deg)`,
+                }}
+                aria-label={
+                  isFlipped
+                    ? "Flashcard answer. Tap to show question."
+                    : "Flashcard question. Tap to reveal answer."
+                }
               >
-                <span className="study-card-index">{known + 1} / {setCards.length}</span>
-                <span className="study-card-kicker">{isFlipped ? "Answer" : "Question"}</span>
+                <span className="study-card-index">
+                  {known + 1} / {setCards.length}
+                </span>
+                <span className="study-card-kicker">
+                  {isFlipped ? "Answer" : "Question"}
+                </span>
                 <strong>{isFlipped ? active.answer : active.question}</strong>
-                <small>{isFlipped ? "Tap to see the question again" : "Tap to reveal the answer"}</small>
-                {active.source_phrase ? <em>From “{active.source_phrase}”</em> : null}
+                <small>
+                  {isFlipped
+                    ? "Tap to see the question again"
+                    : "Tap to reveal the answer"}
+                </small>
+                {active.source_phrase ? (
+                  <em>From “{active.source_phrase}”</em>
+                ) : null}
               </button>
             </div>
-            <p className="study-swipe-hint">Swipe right to review again · Swipe left when you got it</p>
+            <p className="study-swipe-hint">
+              Swipe right to review again · Swipe left when you got it
+            </p>
             <div className="study-actions">
-              <button type="button" className="study-again" onClick={() => record("again")}>↺ Review again</button>
-              <button type="button" className="study-known" onClick={() => record("known")}>Got it →</button>
+              <button
+                type="button"
+                className="study-again"
+                onClick={() => record("again")}
+              >
+                ↺ Review again
+              </button>
+              <button
+                type="button"
+                className="study-known"
+                onClick={() => record("known")}
+              >
+                Got it →
+              </button>
             </div>
           </>
         ) : (
           <div className="study-complete" aria-live="polite">
             <p className="eyebrow">Session complete</p>
             <h3>You recalled every card.</h3>
-            <p>{sessionResults.filter((result) => result === "known").length} cards marked as known this session.</p>
-            <button type="button" className="secondary-button" onClick={resetDeck}>Review this deck again</button>
+            <p>
+              {sessionResults.filter((result) => result === "known").length}{" "}
+              cards marked as known this session.
+            </p>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={resetDeck}
+            >
+              Review this deck again
+            </button>
           </div>
         )}
 
-        {(setCards.length || activeSet) ? (
+        {setCards.length || activeSet ? (
           <footer className="study-deck-footer">
             <span>Notes and cards saved on this device</span>
             <div>
-              <button type="button" className="text-button" onClick={() => setIsReviewing(false)}>All study sets</button>
-              {setCards.length ? <button type="button" className="text-button" onClick={resetDeck}>Reset progress</button> : null}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setIsReviewing(false)}
+              >
+                All study sets
+              </button>
+              {setCards.length ? (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={resetDeck}
+                >
+                  Reset progress
+                </button>
+              ) : null}
             </div>
           </footer>
         ) : null}

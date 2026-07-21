@@ -265,7 +265,8 @@ const loadingCopy = [
     eyebrow: "Reading your notebook",
     heading: "Finding the ideas",
     emphasis: "you put on paper.",
-    detail: "Starting with the handwriting, structure, and study cues on the page.",
+    detail:
+      "Starting with the handwriting, structure, and study cues on the page.",
   },
   {
     eyebrow: "Shaping your notes",
@@ -1001,7 +1002,8 @@ function HowItWorks() {
           <h3>study it your way</h3>
           <p>
             Select a highlighted phrase for context and trusted links, then turn
-            the same notes into flashcards, a focus session, or a shareable deck.
+            the same notes into flashcards, a focus session, or a shareable
+            deck.
           </p>
         </article>
       </div>
@@ -1100,7 +1102,8 @@ export default function Page() {
     sessionId,
     studySetIdOverride,
   ]);
-  const activeLoadingCopy = loadingCopy[Math.min(stage, loadingCopy.length - 1)];
+  const activeLoadingCopy =
+    loadingCopy[Math.min(stage, loadingCopy.length - 1)];
   const structuredNotebookLayout = getNotebookContentLayout(renderedTypedText);
   const extractedNotebookHeading = getNotebookHeading(renderedTypedText);
   const useCompactNotebookTitle =
@@ -1286,7 +1289,10 @@ export default function Page() {
       "Select a short phrase on the page to add a highlighter.",
     );
   }
-  function openSavedStudySet(savedStudySet: SavedStudySet, savedCards: StudyCard[]) {
+  function openSavedStudySet(
+    savedStudySet: SavedStudySet,
+    savedCards: StudyCard[],
+  ) {
     const restoredPages = savedStudySet.pages.map((page) => ({
       pageSummary: page.title,
       typedText: page.typedText,
@@ -1312,15 +1318,14 @@ export default function Page() {
     setScreen("trace");
   }
 
-  async function shareStudySet(
-    studySet: SavedStudySet,
-    cards: StudyCard[],
-  ) {
+  async function shareStudySet(studySet: SavedStudySet, cards: StudyCard[]) {
     // Scans stay on the learner's device. A shared deck includes the cleaned
     // notes, highlights, and recall cards needed to study together.
     const sharedStudySet = {
       ...studySet,
-      pages: studySet.pages.map(({ imageDataUrl: _imageDataUrl, ...page }) => page),
+      pages: studySet.pages.map(
+        ({ imageDataUrl: _imageDataUrl, ...page }) => page,
+      ),
     };
     const response = await fetch("/api/shared-study-sets", {
       method: "POST",
@@ -1343,7 +1348,8 @@ export default function Page() {
         const response = await fetch(
           `/api/shared-study-sets/${encodeURIComponent(shareId)}`,
         );
-        if (!response.ok) throw new Error("This shared study set is unavailable.");
+        if (!response.ok)
+          throw new Error("This shared study set is unavailable.");
         const payload = (await response.json()) as {
           study_set: SavedStudySet;
           cards: StudyCard[];
@@ -1352,7 +1358,9 @@ export default function Page() {
       } catch (error) {
         if (!cancelled) {
           setAnalysisError(
-            error instanceof Error ? error.message : "This shared study set is unavailable.",
+            error instanceof Error
+              ? error.message
+              : "This shared study set is unavailable.",
           );
         }
       }
@@ -1619,7 +1627,9 @@ export default function Page() {
     } catch (error) {
       const starterCards = createStarterFlashcards(regions, renderedTypedText);
       if (starterCards.length) {
-        setFlashcards(starterCards.map((card) => ({ ...card, included: true })));
+        setFlashcards(
+          starterCards.map((card) => ({ ...card, included: true })),
+        );
         return;
       }
       setFlashcardError(
@@ -2359,7 +2369,10 @@ export default function Page() {
                     Close
                   </button>
                 </header>
-                <div className="uploaded-image-tabs" aria-label="Uploaded notebook pages">
+                <div
+                  className="uploaded-image-tabs"
+                  aria-label="Uploaded notebook pages"
+                >
                   {pageImageDataUrls.map((url, index) => (
                     <button
                       key={`${url.slice(0, 24)}-${index}`}
@@ -2425,7 +2438,11 @@ export default function Page() {
       {isFlashcardDrawerOpen ? (
         <FlashcardStudyDeck
           cards={flashcards.filter((card) => card.included)}
-          studySet={screen === "trace" || screen === "graph" ? currentStudySet : undefined}
+          studySet={
+            screen === "trace" || screen === "graph"
+              ? currentStudySet
+              : undefined
+          }
           initialMode={flashcardDrawerMode}
           onClose={() => setIsFlashcardDrawerOpen(false)}
           onOpenStudySet={openSavedStudySet}

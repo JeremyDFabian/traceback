@@ -4378,7 +4378,9 @@ textarea:focus-visible {
   font-weight: 800;
   letter-spacing: 0.04em;
   padding: 11px 14px;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 .study-deck-button:hover,
 .study-deck-button:focus-visible {
@@ -4402,44 +4404,56 @@ textarea:focus-visible {
   font-size: 11px;
   font-weight: 800;
 }
-  .study-deck-status {
-    margin: 24px 0 12px;
-  }
-  .pomodoro-timer {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px 18px;
-    align-items: center;
-    margin: 22px 0;
-    padding: 16px;
-    border: 1px solid #4d0e1226;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #a5bcd638, #fffdf8 65%);
-  }
-  .pomodoro-timer .eyebrow { margin: 0 0 4px; }
-  .pomodoro-timer strong { color: #4a2e27; font-size: 14px; }
-  .pomodoro-clock {
-    margin: 0;
-    color: #4d0e12;
-    font: 700 27px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-    letter-spacing: -0.06em;
-  }
-  .pomodoro-controls {
-    display: flex;
-    grid-column: 1 / -1;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .pomodoro-start,
-  .share-set-button {
-    border: 1px solid #4d0e12;
-    border-radius: 10px;
-    background: #4d0e12;
-    color: #fffdf8;
-    font: 800 11px/1 inherit;
-    padding: 10px 13px;
-  }
-.share-set-button:disabled { cursor: wait; opacity: 0.7; }
+.study-deck-status {
+  margin: 24px 0 12px;
+}
+.pomodoro-timer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 18px;
+  align-items: center;
+  margin: 22px 0;
+  padding: 16px;
+  border: 1px solid #4d0e1226;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #a5bcd638, #fffdf8 65%);
+}
+.pomodoro-timer .eyebrow {
+  margin: 0 0 4px;
+}
+.pomodoro-timer strong {
+  color: #4a2e27;
+  font-size: 14px;
+}
+.pomodoro-clock {
+  margin: 0;
+  color: #4d0e12;
+  font:
+    700 27px/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: -0.06em;
+}
+.pomodoro-controls {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 10px;
+}
+.pomodoro-start,
+.share-set-button {
+  border: 1px solid #4d0e12;
+  border-radius: 10px;
+  background: #4d0e12;
+  color: #fffdf8;
+  font: 800 11px/1 inherit;
+  padding: 10px 13px;
+}
+.share-set-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
 .delete-set-button {
   border-color: #4d0e1250 !important;
   background: #fffdf8 !important;
@@ -4467,14 +4481,19 @@ textarea:focus-visible {
   touch-action: none;
   user-select: none;
 }
-.floating-focus-timer:active { cursor: grabbing; }
+.floating-focus-timer:active {
+  cursor: grabbing;
+}
 .focus-timer-heading {
   display: flex;
   align-items: center;
   gap: 6px;
   color: #4d0e12;
 }
-.focus-timer-heading span { color: #a5bcd6; font-size: 15px; }
+.focus-timer-heading span {
+  color: #a5bcd6;
+  font-size: 15px;
+}
 .focus-timer-heading p {
   margin: 0;
   font-size: 10px;
@@ -4486,7 +4505,9 @@ textarea:focus-visible {
   display: block;
   margin: 8px 0 11px;
   color: #4a2e27;
-  font: italic 32px/1 Georgia, serif;
+  font:
+    italic 32px/1 Georgia,
+    serif;
 }
 .floating-focus-timer > div:last-child {
   display: flex;
@@ -4511,12 +4532,12 @@ textarea:focus-visible {
   }
 }
 .share-status {
-    margin: 9px 0 0;
-    color: #4d0e12;
-    font-size: 11px;
-    font-weight: 800;
-    text-align: left;
-  }
+  margin: 9px 0 0;
+  color: #4d0e12;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
+}
 .study-deck-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -4543,7 +4564,11 @@ textarea:focus-visible {
   outline: 0;
   background: transparent;
   color: #4a2e27;
-  font: 700 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font:
+    700 10px/1.2 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
 }
 .share-link-box button {
   flex: none;
@@ -4632,7 +4657,9 @@ textarea:focus-visible {
   display: -webkit-box;
   margin: 7px 0 8px;
   color: #4a2e27;
-  font: italic 25px/1.08 Georgia, serif;
+  font:
+    italic 25px/1.08 Georgia,
+    serif;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
@@ -4661,7 +4688,9 @@ textarea:focus-visible {
   padding: 0 10px;
   white-space: nowrap;
 }
-.study-set-actions button:first-child { flex-grow: 1.4; }
+.study-set-actions button:first-child {
+  flex-grow: 1.4;
+}
 .study-set-delete-row {
   display: flex;
   justify-content: flex-end;
@@ -4720,7 +4749,9 @@ textarea:focus-visible {
 .uploaded-images-panel h2 {
   margin: 6px 0 0;
   color: #4a2e27;
-  font: italic clamp(26px, 4vw, 38px)/1 Georgia, serif;
+  font:
+    italic clamp(26px, 4vw, 38px)/1 Georgia,
+    serif;
 }
 .uploaded-image-tabs {
   display: flex;
@@ -4786,7 +4817,9 @@ textarea:focus-visible {
 .comparison-notes h3 {
   margin: 22px 24px 14px;
   color: #4a2e27;
-  font: italic 30px/1.05 Georgia, serif;
+  font:
+    italic 30px/1.05 Georgia,
+    serif;
 }
 .comparison-notes .notebook-plain-text,
 .comparison-notes .structured-notebook-text {
@@ -4854,7 +4887,9 @@ textarea:focus-visible {
   display: block;
   margin-top: 8px;
   color: #4a2e27;
-  font: italic 27px/1 Georgia, serif;
+  font:
+    italic 27px/1 Georgia,
+    serif;
 }
 .mockup-study-card p {
   margin: 8px 0 0;
@@ -4914,7 +4949,9 @@ textarea:focus-visible {
   cursor: grab;
   text-align: left;
   touch-action: pan-y;
-  transition: transform 0.18s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.2s ease;
 }
 .study-card:active {
   cursor: grabbing;
@@ -4969,7 +5006,9 @@ textarea:focus-visible {
   max-width: 100%;
   margin: 18px 0;
   color: #4a2e27;
-  font: italic clamp(28px, 4vw, 43px) / 1.06 Georgia, serif;
+  font:
+    italic clamp(28px, 4vw, 43px) / 1.06 Georgia,
+    serif;
 }
 .study-card.is-flipped strong {
   color: #4d0e12;
@@ -5037,7 +5076,9 @@ textarea:focus-visible {
 .study-complete h3 {
   margin: 7px 0;
   color: #4a2e27;
-  font: italic 29px/1.05 Georgia, serif;
+  font:
+    italic 29px/1.05 Georgia,
+    serif;
 }
 .study-empty p:last-child,
 .study-complete p {
@@ -5093,7 +5134,9 @@ textarea:focus-visible {
   position: relative;
   margin: 0 0 18px;
   color: #4a2e27;
-  font: italic 30px/1.05 Georgia, serif;
+  font:
+    italic 30px/1.05 Georgia,
+    serif;
 }
 .saved-note-page div {
   position: relative;
@@ -5138,10 +5181,10 @@ textarea:focus-visible {
     align-items: stretch;
     flex-direction: column;
   }
-    .study-set-actions {
-      grid-template-columns: 1fr 1fr;
-      min-width: 0;
-    }
+  .study-set-actions {
+    grid-template-columns: 1fr 1fr;
+    min-width: 0;
+  }
   .study-card-stack {
     min-height: 360px;
   }

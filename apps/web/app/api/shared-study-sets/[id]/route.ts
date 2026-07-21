@@ -12,12 +12,18 @@ export async function GET(
 ) {
   const { id } = await params;
   if (!/^[a-f0-9]{32}$/i.test(id)) {
-    return NextResponse.json({ detail: "Shared study set not found" }, { status: 404 });
+    return NextResponse.json(
+      { detail: "Shared study set not found" },
+      { status: 404 },
+    );
   }
   try {
     const content = await readFile(join(shareDirectory, `${id}.json`), "utf8");
     return NextResponse.json(JSON.parse(content));
   } catch {
-    return NextResponse.json({ detail: "Shared study set not found" }, { status: 404 });
+    return NextResponse.json(
+      { detail: "Shared study set not found" },
+      { status: 404 },
+    );
   }
 }
