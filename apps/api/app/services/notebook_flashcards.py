@@ -63,8 +63,7 @@ def generate_notebook_flashcards(
 
     return NotebookFlashcardResponse(
         flashcards=[
-            NotebookFlashcard(id=str(uuid4()), **card.model_dump())
-            for card in batch.flashcards
+            NotebookFlashcard(id=str(uuid4()), **card.model_dump()) for card in batch.flashcards
         ]
     )
 

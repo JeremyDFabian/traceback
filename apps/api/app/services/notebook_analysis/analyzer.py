@@ -127,14 +127,13 @@ def typed_text_from_regions(regions: list[NotebookRegion]) -> str:
     blocks = [
         region
         for region in regions
-        if " ".join(region.transcription.split()) not in {"", chr(0x2022), chr(0x00E2) + chr(0x20AC) + chr(0x00A2), "0"}
+        if " ".join(region.transcription.split())
+        not in {"", chr(0x2022), chr(0x00E2) + chr(0x20AC) + chr(0x00A2), "0"}
     ]
     if not blocks:
         return ""
 
-    blocks.sort(
-        key=lambda region: (region.bbox.y + region.bbox.height / 2, region.bbox.x)
-    )
+    blocks.sort(key=lambda region: (region.bbox.y + region.bbox.height / 2, region.bbox.x))
     rows: list[list[NotebookRegion]] = []
     row_centers: list[float] = []
     row_heights: list[float] = []
@@ -144,8 +143,7 @@ def typed_text_from_regions(regions: list[NotebookRegion]) -> str:
             (
                 index
                 for index, row_center in enumerate(row_centers)
-                if abs(center - row_center)
-                <= max(row_heights[index], block.bbox.height) * 0.65
+                if abs(center - row_center) <= max(row_heights[index], block.bbox.height) * 0.65
             ),
             None,
         )
@@ -157,9 +155,9 @@ def typed_text_from_regions(regions: list[NotebookRegion]) -> str:
 
         row = rows[matching_row]
         row.append(block)
-        row_centers[matching_row] = sum(
-            item.bbox.y + item.bbox.height / 2 for item in row
-        ) / len(row)
+        row_centers[matching_row] = sum(item.bbox.y + item.bbox.height / 2 for item in row) / len(
+            row
+        )
         row_heights[matching_row] = max(item.bbox.height for item in row)
 
     lines: list[str] = []
@@ -169,6 +167,7 @@ def typed_text_from_regions(regions: list[NotebookRegion]) -> str:
         line = re.sub(r"\s+(?=\d+[.)]\s)", "\n", line)
         lines.extend(part.strip() for part in line.splitlines() if part.strip())
     return "\n".join(lines)
+
 
 def finalize_remote_result(
     result: NotebookAnalysisResult,

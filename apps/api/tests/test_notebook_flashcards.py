@@ -90,6 +90,4 @@ def test_notebook_flashcards_fall_back_to_note_based_cards_without_openai(
     cards = response.json()["flashcards"]
     assert len(cards) == 3
     assert cards[0]["source_phrase"] == "Mitochondria"
-    assert cards[0]["answer"] == (
-        "Mitochondria help cells make ATP through cellular respiration."
-    )
+    assert cards[0]["answer"] == ("Mitochondria help cells make ATP through cellular respiration.")

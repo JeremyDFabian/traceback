@@ -334,10 +334,13 @@ def test_typed_text_groups_ocr_words_on_the_same_visual_line() -> None:
             confidence=0.9,
         )
 
-    assert typed_text_from_regions(
-        [
-            region("two", "boxes", 0.24, 0.10),
-            region("one", "Bounding", 0.10, 0.10),
-            region("three", "are useful", 0.10, 0.18),
-        ]
-    ) == "Bounding boxes\nare useful"
+    assert (
+        typed_text_from_regions(
+            [
+                region("two", "boxes", 0.24, 0.10),
+                region("one", "Bounding", 0.10, 0.10),
+                region("three", "are useful", 0.10, 0.18),
+            ]
+        )
+        == "Bounding boxes\nare useful"
+    )
