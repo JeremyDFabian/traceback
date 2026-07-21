@@ -15,6 +15,19 @@
   <img src="apps/web/public/readme-landing-preview.png" alt="Traceback landing page with notebook scanning and interactive study notes" width="1000" />
 </p>
 
+## Tech stack
+
+<p>
+  <a href="https://nextjs.org"><img alt="Next.js 16" src="https://img.shields.io/badge/Next.js%2016-111111?style=for-the-badge&logo=nextdotjs&logoColor=white" /></a>
+  <a href="https://react.dev"><img alt="React 19" src="https://img.shields.io/badge/React%2019-149ECA?style=for-the-badge&logo=react&logoColor=white" /></a>
+  <a href="https://www.typescriptlang.org"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" /></a>
+  <a href="https://tailwindcss.com"><img alt="Tailwind CSS v4" src="https://img.shields.io/badge/Tailwind%20CSS%20v4-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white" /></a>
+  <a href="https://fastapi.tiangolo.com"><img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" /></a>
+  <a href="https://www.python.org"><img alt="Python 3.12" src="https://img.shields.io/badge/Python%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white" /></a>
+  <a href="https://platform.openai.com"><img alt="OpenAI GPT-5.6 Terra" src="https://img.shields.io/badge/OpenAI-GPT--5.6%20Terra-412991?style=for-the-badge&logo=openai&logoColor=white" /></a>
+  <a href="https://docs.opencv.org"><img alt="OCR and layout analysis" src="https://img.shields.io/badge/OCR%20%2B%20layout-EasyOCR%20%2B%20OpenCV-5A4A42?style=for-the-badge" /></a>
+</p>
+
 ## The problem
 
 Students who learn on paper lose momentum when they move to a laptop. A photographed notebook page is hard to search, difficult to review, and easy to abandon in a folder. Conventional OCR often produces a flat text dump rather than something built for learning.
@@ -23,11 +36,11 @@ Students who learn on paper lose momentum when they move to a laptop. A photogra
 
 ## What Traceback does
 
-| From a notebook page | To a study workflow |
-| --- | --- |
-| One or more photographed pages | Clean, readable, structured study notes |
-| A short key phrase | A safe interactive highlight with a quick explanation and trusted learning links |
-| A saved set of notes | Flashcards, a Pomodoro focus timer, and a shareable study-deck link |
+| From a notebook page           | To a study workflow                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------- |
+| One or more photographed pages | Clean, readable, structured study notes                                          |
+| A short key phrase             | A safe interactive highlight with a quick explanation and trusted learning links |
+| A saved set of notes           | Flashcards, a Pomodoro focus timer, and a shareable study-deck link              |
 
 ## How it works
 
@@ -153,6 +166,15 @@ Traceback was built for OpenAI Build Week as a complete, runnable education prod
 2. GPT-5.6 Terra returns a Pydantic-validated result: clean typed text, 3–8 short highlight phrases, coordinates, one-sentence explanations, and trusted-source search queries.
 3. Server-side checks reject phrases that are too long, duplicated, or missing from the typed notes before the frontend can render them.
 4. The same model can generate grounded flashcards from the learner's cleaned note text and selected highlights. If it is unavailable, Traceback uses a clearly labelled note-based fallback.
+
+### GPT-5.6 Terra's impact on development
+
+GPT-5.6 Terra shaped both the product capability and the engineering decisions behind it:
+
+- **Made handwriting useful after OCR.** Rather than shipping a flat transcription, Terra turns the OCR and page-layout evidence into readable study notes, concise concepts, and review-ready cards.
+- **Kept the interface trustworthy.** Its structured output contract led us to validate every suggested highlight against the rendered text, limiting highlights to meaningful 1–5 word phrases instead of exposing unreliable full-line annotations.
+- **Informed a judge-friendly flow.** Terra's multimodal analysis enabled a clear demo narrative: scan pages, receive structured notes, select a concept for grounded context, then review generated flashcards from the same study set.
+- **Accelerated iteration.** Together with Codex, Terra helped us test and refine the product's OCR-to-study experience while preserving deterministic fallbacks when a live model call is unavailable.
 
 ### Judge demo path
 
