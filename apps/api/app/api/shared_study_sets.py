@@ -31,13 +31,13 @@ def _share_directory() -> Path:
     return directory
 
 
-@router.post("/shared-study-sets", response_model=SharedStudySetResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/shared-study-sets", response_model=SharedStudySetResponse, status_code=status.HTTP_201_CREATED
+)
 def create_shared_study_set(payload: SharedStudySetRequest) -> SharedStudySetResponse:
     share_id = uuid4().hex
     record = {"study_set": payload.study_set, "cards": payload.cards}
-    (_share_directory() / f"{share_id}.json").write_text(
-        json.dumps(record), encoding="utf-8"
-    )
+    (_share_directory() / f"{share_id}.json").write_text(json.dumps(record), encoding="utf-8")
     return SharedStudySetResponse(id=share_id, **record)
 
 
@@ -50,4 +50,6 @@ def get_shared_study_set(share_id: str) -> SharedStudySetResponse:
         record = json.loads(path.read_text(encoding="utf-8"))
         return SharedStudySetResponse(id=share_id, **record)
     except (OSError, json.JSONDecodeError, TypeError) as error:
-        raise HTTPException(status_code=500, detail="Shared study set could not be opened") from error
+        raise HTTPException(
+            status_code=500, detail="Shared study set could not be opened"
+        ) from error
