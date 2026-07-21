@@ -1801,7 +1801,7 @@ export default function Page() {
                   <p>
                     {conceptDetails?.definition ??
                       selected.explanation ??
-                      `${selected.label} is a key idea in this notebook page.`}
+                      `You marked “${selected.label}” to revisit. Explore the explanation and links to build on it.`}
                   </p>
                 </div>
                 <div className="reference-list">
