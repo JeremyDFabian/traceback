@@ -34,16 +34,19 @@ type ConceptGraphProps = {
   status: GraphStatus;
   onRetry?: () => void;
   onOpenSource: (pageId: string, regionId: string) => void;
-  onCreateFlashcards: (nodeId: string) => void;
+  onCreateFlashcards?: (nodeId: string) => void;
 };
 
-const positions = [
-  { x: 26, y: 18 },
-  { x: 68, y: 34 },
-  { x: 22, y: 68 },
-  { x: 64, y: 76 },
-  { x: 46, y: 50 },
-];
+function positionForNode(index: number, count: number) {
+  if (count === 1) return { x: 50, y: 50 };
+  const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
+  const radiusX = count > 6 ? 36 : 30;
+  const radiusY = count > 6 ? 35 : 29;
+  return {
+    x: 50 + Math.cos(angle) * radiusX,
+    y: 50 + Math.sin(angle) * radiusY,
+  };
+}
 
 function pageLabel(pageId: string) {
   return pageId.replace(/^page-/, "page ");
@@ -54,7 +57,6 @@ export function ConceptGraph({
   status,
   onRetry,
   onOpenSource,
-  onCreateFlashcards,
 }: ConceptGraphProps) {
   const [selectedId, setSelectedId] = useState(graph?.nodes[0]?.id ?? "");
   const selected =
@@ -85,15 +87,29 @@ export function ConceptGraph({
   const nodeIndexes = new Map(
     graph.nodes.map((node, index) => [node.id, index]),
   );
-  const connectedLabels = graph.edges
+  const connections = graph.edges
     .filter(
       (edge) => edge.source === selected?.id || edge.target === selected?.id,
     )
     .map((edge) => {
       const otherId = edge.source === selected?.id ? edge.target : edge.source;
-      return graph.nodes.find((node) => node.id === otherId)?.label;
+      const otherNode = graph.nodes.find((node) => node.id === otherId);
+      return otherNode
+        ? {
+            node: otherNode,
+            relation: edge.review_required
+              ? "Connection to review"
+              : edge.label || "Related concept",
+          }
+        : undefined;
     })
-    .filter((label): label is string => Boolean(label));
+    .filter(
+      (
+        connection,
+      ): connection is { node: ConceptGraphData["nodes"][number]; relation: string } =>
+        Boolean(connection),
+    );
+  const reviewCount = graph.edges.filter((edge) => edge.review_required).length;
 
   return (
     <section className="concept-graph-layout" aria-label="Concept graph">
@@ -102,6 +118,10 @@ export function ConceptGraph({
           <div>
             <p className="concept-graph-eyebrow">Approved scanned pages</p>
             <h1>Your concept graph</h1>
+            <p className="concept-graph-summary">
+              {graph.nodes.length} concepts · {graph.edges.length} relationships
+              {reviewCount ? ` · ${reviewCount} to review` : ""}
+            </p>
           </div>
           {status === "pending" ? (
             <p role="status">Graph update pending</p>
@@ -122,8 +142,8 @@ export function ConceptGraph({
             {graph.edges.map((edge) => {
               const sourceIndex = nodeIndexes.get(edge.source) ?? 0;
               const targetIndex = nodeIndexes.get(edge.target) ?? 0;
-              const source = positions[sourceIndex % positions.length];
-              const target = positions[targetIndex % positions.length];
+              const source = positionForNode(sourceIndex, graph.nodes.length);
+              const target = positionForNode(targetIndex, graph.nodes.length);
               return (
                 <g
                   key={edge.id}
@@ -144,7 +164,7 @@ export function ConceptGraph({
                     x={(source.x + target.x) / 2}
                     y={(source.y + target.y) / 2 - 2}
                   >
-                    {edge.review_required ? "Review" : edge.label}
+                    {edge.review_required ? "Review" : edge.label || "Related"}
                   </text>
                 </g>
               );
@@ -152,7 +172,7 @@ export function ConceptGraph({
           </svg>
 
           {graph.nodes.map((node, index) => {
-            const position = positions[index % positions.length];
+            const position = positionForNode(index, graph.nodes.length);
             const firstSource = node.sources[0];
             return (
               <button
@@ -180,8 +200,8 @@ export function ConceptGraph({
           <p className="concept-graph-eyebrow">Selected concept</p>
           <h2>{selected.label}</h2>
           <p>
-            Connected to {connectedLabels.length} approved concept
-            {connectedLabels.length === 1 ? "" : "s"}.
+            Connected to {connections.length} approved concept
+            {connections.length === 1 ? "" : "s"}.
           </p>
 
           <div className="concept-graph-source">
@@ -189,12 +209,17 @@ export function ConceptGraph({
             <blockquote>{selected.sources[0].excerpt}</blockquote>
           </div>
 
-          {connectedLabels.length ? (
+          {connections.length ? (
             <div className="concept-graph-connections">
               <strong>Connected concepts</strong>
               <ul>
-                {connectedLabels.map((label) => (
-                  <li key={label}>{label}</li>
+                {connections.map(({ node, relation }) => (
+                  <li key={node.id}>
+                    <button type="button" onClick={() => setSelectedId(node.id)}>
+                      {node.label}
+                    </button>
+                    <small>{relation}</small>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -214,13 +239,6 @@ export function ConceptGraph({
               }
             >
               Open scanned {pageLabel(selected.sources[0].page_id)}
-            </button>
-            <button
-              type="button"
-              className="primary-button"
-              onClick={() => onCreateFlashcards(selected.id)}
-            >
-              Create flashcards
             </button>
           </div>
         </aside>
