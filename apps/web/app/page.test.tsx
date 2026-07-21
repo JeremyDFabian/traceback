@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Page, {
   getNotebookContentLayout,
+  getPreferredSources,
   getRelevantSources,
   InteractiveNotebookText,
   type Region,
@@ -116,13 +117,15 @@ describe("home page", () => {
         files: [new File(["scan"], "notes.png", { type: "image/png" })],
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Scan my pages →" }));
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /Scan my pages/ })[1],
+    );
 
     await screen.findByRole("heading", { name: "Energy in cells" });
     fireEvent.click(screen.getByRole("button", { name: /concept graph/i }));
 
     expect(
-      await screen.findByRole("heading", { name: "Your concept graph" }),
+      await screen.findByRole("heading", { name: "Your study canvas" }),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(
@@ -190,18 +193,29 @@ Supporting detail for revision."
     ).toBeInTheDocument();
   });
 
-  it("chooses medical reference sites for microbiology concepts", () => {
-    expect(
-      getRelevantSources("Microbes are ubiquitous").map(
-        (source) => source.title,
-      ),
-    ).toEqual([
-      "CDC resources on Microbes are ubiquitous",
-      "PubMed research on Microbes are ubiquitous",
-      "NCBI Bookshelf on Microbes are ubiquitous",
-    ]);
+  it("does not create generic fallback links without a verified source", () => {
+    expect(getRelevantSources("Microbes are ubiquitous")).toEqual([]);
   });
 
+  it("prefers exact highlight links and approved API sources", () => {
+    expect(
+      getPreferredSources(
+        "PCR",
+        ["PCR diagnostic testing"],
+        [{ title: "WHO PCR guidance", url: "https://www.who.int/pcr" }],
+        [{ title: "Fallback API source", url: "https://example.com/api" }],
+      ),
+    ).toEqual([{ title: "WHO PCR guidance", url: "https://www.who.int/pcr" }]);
+
+    expect(
+      getPreferredSources(
+        "PCR",
+        ["PCR diagnostic testing"],
+        [],
+        [{ title: "NIH PCR overview", url: "https://www.nih.gov/pcr" }],
+      ),
+    ).toEqual([{ title: "NIH PCR overview", url: "https://www.nih.gov/pcr" }]);
+  });
   it("highlights valid concepts that contain punctuation", () => {
     render(
       <InteractiveNotebookText
@@ -258,6 +272,12 @@ Supporting detail for revision."
       <InteractiveNotebookText
         text={text}
         regions={[
+          {
+            ...interactiveRegion,
+            id: "holmes",
+            label: "Pr. Holmes",
+            highlightText: "Pr. Holmes",
+          },
           { ...interactiveRegion, highlightText: "Birth at home" },
           {
             ...interactiveRegion,
@@ -274,13 +294,67 @@ Supporting detail for revision."
     expect(
       screen.getByRole("heading", { name: text.split("\n")[0] }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Pr. Holmes").tagName).toBe("STRONG");
+    expect(
+      screen.getByRole("button", { name: "Pr. Holmes" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Birth at home" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "PCR" })).toBeInTheDocument();
   });
 
+  it("preserves an explicit heading, bullet hierarchy, and supporting details", () => {
+    const text = [
+      "# Cell Biology",
+      "- Cell membrane - controls movement",
+      "  - Selectively permeable barrier",
+      "- Mitochondria - releases energy",
+    ].join("\n");
+
+    expect(getNotebookContentLayout(text)).toEqual({
+      heading: "Cell Biology",
+      items: [
+        {
+          name: "Cell membrane",
+          contribution: "controls movement",
+          support: "Selectively permeable barrier",
+          style: "bullet",
+        },
+        {
+          name: "Mitochondria",
+          contribution: "releases energy",
+          style: "bullet",
+        },
+      ],
+    });
+  });
+  it("treats a person-name hash heading as the name for the first contribution", () => {
+    const text = [
+      "# Pr. Holmes",
+      "- Birth at home",
+      "Ignaz Semmelweis",
+      "- Handwashing",
+      "Edward Jenner",
+      "- Smallpox vaccination",
+    ].join("\n");
+
+    expect(getNotebookContentLayout(text)).toEqual({
+      heading: undefined,
+      items: [
+        { name: "Pr. Holmes", contribution: "Birth at home", style: "bullet" },
+        {
+          name: "Ignaz Semmelweis",
+          contribution: "Handwashing",
+          style: "bullet",
+        },
+        {
+          name: "Edward Jenner",
+          contribution: "Smallpox vaccination",
+          style: "bullet",
+        },
+      ],
+    });
+  });
   it("renders legacy regions without highlight text as plain PDF text", () => {
     render(
       <InteractiveNotebookText

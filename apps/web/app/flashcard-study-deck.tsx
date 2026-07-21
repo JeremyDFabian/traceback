@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -176,7 +177,7 @@ export function FlashcardStudyDeck({
   function deleteStudySet(studySetToDelete: SavedStudySet) {
     if (
       !window.confirm(
-        `Delete “${studySetToDelete.title}” and its saved flashcards from this device?`,
+        `Delete "${studySetToDelete.title}" and its saved flashcards from this device?`,
       )
     ) {
       return;
@@ -319,7 +320,6 @@ export function FlashcardStudyDeck({
             Close
           </button>
         </header>
-
         {!isReviewing ? (
           deck.studySets.length ? (
             <div className="study-set-library">
@@ -480,7 +480,7 @@ export function FlashcardStudyDeck({
                     : "Tap to reveal the answer"}
                 </small>
                 {active.source_phrase ? (
-                  <em>From “{active.source_phrase}”</em>
+                  <em>From "{active.source_phrase}"</em>
                 ) : null}
               </button>
             </div>
@@ -520,31 +520,7 @@ export function FlashcardStudyDeck({
               Review this deck again
             </button>
           </div>
-        )}
-
-        {setCards.length || activeSet ? (
-          <footer className="study-deck-footer">
-            <span>Notes and cards saved on this device</span>
-            <div>
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => setIsReviewing(false)}
-              >
-                All study sets
-              </button>
-              {setCards.length ? (
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={resetDeck}
-                >
-                  Reset progress
-                </button>
-              ) : null}
-            </div>
-          </footer>
-        ) : null}
+        )}{" "}
       </section>
     </div>
   );

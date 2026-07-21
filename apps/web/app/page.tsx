@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -93,77 +94,27 @@ type Screen = "setup" | "processing" | "editor" | "trace" | "graph" | "cards";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export function getRelevantSources(label: string, queries: string[] = []) {
-  const queryText = queries.find((query) => query.trim())?.trim() ?? label;
-  const query = encodeURIComponent(queryText);
-  const topic = `${label} ${queryText}`.toLocaleLowerCase();
+export function getRelevantSources(_label: string, _queries: string[] = []) {
+  return [];
+}
 
-  if (
-    /(bacteria|virus|microbe|infection|disease|medical|health|syphilis)/.test(
-      topic,
-    )
-  ) {
-    return [
-      {
-        title: `CDC resources on ${label}`,
-        url: `https://search.cdc.gov/search/?query=${query}`,
-      },
-      {
-        title: `PubMed research on ${label}`,
-        url: `https://pubmed.ncbi.nlm.nih.gov/?term=${query}`,
-      },
-      {
-        title: `NCBI Bookshelf on ${label}`,
-        url: `https://www.ncbi.nlm.nih.gov/books/?term=${query}`,
-      },
-    ];
-  }
-  if (/(history|historical|jenner|semme|holmes|ehrlich)/.test(topic)) {
-    return [
-      {
-        title: `Britannica on ${label}`,
-        url: `https://www.britannica.com/search?query=${query}`,
-      },
-      {
-        title: `NIH history resources on ${label}`,
-        url: `https://www.nih.gov/search?query=${query}`,
-      },
-      {
-        title: `National Library of Medicine on ${label}`,
-        url: `https://www.nlm.nih.gov/search/?query=${query}`,
-      },
-    ];
-  }
-  if (/(cell|atp|mitochond|biology|genetic|pcr|dna|rna)/.test(topic)) {
-    return [
-      {
-        title: `OpenStax on ${label}`,
-        url: `https://openstax.org/search?query=${query}`,
-      },
-      {
-        title: `Nature Education on ${label}`,
-        url: `https://www.nature.com/search?q=${query}`,
-      },
-      {
-        title: `Khan Academy on ${label}`,
-        url: `https://www.khanacademy.org/search?page_search_query=${query}`,
-      },
-    ];
-  }
-  return [
-    {
-      title: `Google Scholar research on ${label}`,
-      url: `https://scholar.google.com/scholar?q=${query}`,
-    },
-    {
-      title: `Britannica on ${label}`,
-      url: `https://www.britannica.com/search?query=${query}`,
-    },
-    {
-      title: `Wikipedia on ${label}`,
-      url: `https://en.wikipedia.org/w/index.php?search=${query}`,
-    },
-  ];
+export function getPreferredSources(
+  label: string,
+  queries: string[] = [],
+  referenceLinks: Array<{ title: string; url: string }> = [],
+  approvedSources: Array<{ title: string; url: string }> = [],
+) {
+  const exactLinks = referenceLinks.filter(
+    (source) => source.title.trim() && source.url.trim(),
+  );
+  if (exactLinks.length) return exactLinks;
+
+  const approvedLinks = approvedSources.filter(
+    (source) => source.title.trim() && source.url.trim(),
+  );
+  if (approvedLinks.length) return approvedLinks;
+
+  return getRelevantSources(label, queries);
 }
 const demoTypedText =
   "Cells make usable energy through cellular respiration. This process uses mitochondria to help produce ATP, the energy cells can use for work.";
@@ -542,10 +493,14 @@ function getReadableNotebookLines(text: string): string[] {
   const withoutHashHeading = text.replace(/^\s*#\s*[^\n:]{2,80}:?\s*/, "");
   return withoutHashHeading
     .replace(/\s+(?=\d+[.)]\s+)/g, "\n")
-    .replace(/\s+-\s+(?=[A-Z])/g, "\n- ")
+    .replace(/(\S)[ \t]+-[ \t]+(?=[A-Z])/g, "$1\n- ")
     .replace(/([.!?])\s+(?=(?:[A-Z][A-Za-z ]{2,60}:|\d+[.)]))/g, "$1\n")
     .split(/\n+/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
+    .map((line) => {
+      const indentation = line.match(/^[\t ]*/)?.[0].replace(/\t/g, "  ") ?? "";
+      const content = line.trim().replace(/\s+/g, " ");
+      return content ? `${indentation}${content}` : "";
+    })
     .filter(Boolean)
     .flatMap(splitLongNotebookLine);
 }
@@ -553,40 +508,72 @@ function getReadableNotebookLines(text: string): string[] {
 export function getNotebookContentLayout(
   text: string,
 ): NotebookContentLayout | undefined {
-  const explicitHeading = getNotebookHeading(text);
+  const rawExplicitHeading = getNotebookHeading(text);
   const lines = getReadableNotebookLines(text);
   if (lines.length < 2) return undefined;
 
   const itemPattern = /^([-*\u2022]|\d+[.)])\s+(.+)$/;
-  const nameAndContribution = /^(.{2,72}?)\s+(?:\u2014|\u2013|-|:)\s+(.+)$/;
+  const nameAndContribution = /^(.{2,72}?)\s+(?:\u2014|\u2013|-|:|\?)\s+(.+)$/;
+  const personName =
+    /^(?:(?:Dr|Pr|Prof)\.?\s+[A-Z][a-z]+|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\??$/;
+  const titledPersonName = /^(?:Dr|Pr|Prof)\.?\s+[A-Z][a-z]+\??$/;
+  const explicitHeading =
+    rawExplicitHeading && !titledPersonName.test(rawExplicitHeading)
+      ? rawExplicitHeading
+      : undefined;
+  const headingPersonName =
+    rawExplicitHeading && titledPersonName.test(rawExplicitHeading)
+      ? rawExplicitHeading.replace(/\?+\s*$/, "").trim()
+      : undefined;
+  const firstContent = lines[0].trim();
   const firstLineIsHeading =
     !explicitHeading &&
-    !itemPattern.test(lines[0]) &&
-    !nameAndContribution.test(lines[0]) &&
-    !/[.!?]$/.test(lines[0]);
+    !itemPattern.test(firstContent) &&
+    !nameAndContribution.test(firstContent) &&
+    !personName.test(firstContent) &&
+    !/[.!?]$/.test(firstContent);
   const heading =
-    explicitHeading ?? (firstLineIsHeading ? lines.shift() : undefined);
+    explicitHeading ?? (firstLineIsHeading ? firstContent : undefined);
+  if (firstLineIsHeading) lines.shift();
   const items: StructuredNotebookItem[] = [];
+  let pendingName: string | undefined = headingPersonName;
 
   for (const line of lines) {
-    const bulletMatch = line.match(itemPattern);
-    const content = bulletMatch?.[2] ?? line;
+    const indentation = line.match(/^[\t ]*/)?.[0].length ?? 0;
+    const normalizedLine = line.trim();
+    const bulletMatch = normalizedLine.match(itemPattern);
+    const content = bulletMatch?.[2] ?? normalizedLine;
     const style = bulletMatch?.[1]?.match(/^\d/)
       ? "numbered"
       : bulletMatch
         ? "bullet"
         : undefined;
+    if (!bulletMatch && personName.test(content)) {
+      pendingName = content.replace(/\?+\s*$/, "").trim();
+      continue;
+    }
     const namedMatch = content.match(nameAndContribution);
     if (namedMatch) {
       items.push({
-        name: namedMatch[1].trim(),
+        name: namedMatch[1].replace(/\?+\s*$/, "").trim(),
         contribution: namedMatch[2].trim(),
         ...(style ? { style } : {}),
       });
+      pendingName = undefined;
+      continue;
+    }
+    if (bulletMatch && indentation > 0 && items.length) {
+      const lastItem = items[items.length - 1];
+      lastItem.support = [lastItem.support, content].filter(Boolean).join(" ");
       continue;
     }
     if (bulletMatch) {
-      items.push({ contribution: content, style });
+      items.push({
+        contribution: content,
+        ...(pendingName ? { name: pendingName } : {}),
+        style,
+      });
+      pendingName = undefined;
       continue;
     }
     if (items.length) {
@@ -716,7 +703,16 @@ export function InteractiveNotebookText({
         {layout.items.map((item, index) => (
           <li key={`${item.name ?? item.contribution}-${index}`}>
             <div>
-              {item.name ? <strong>{item.name}</strong> : null}
+              {item.name ? (
+                <strong>
+                  <HighlightableNotebookText
+                    text={item.name}
+                    regions={regions}
+                    selectedId={selectedId}
+                    onSelect={onSelect}
+                  />
+                </strong>
+              ) : null}
               {item.name ? " \u2014 " : null}
               <HighlightableNotebookText
                 text={item.contribution}
@@ -1025,6 +1021,9 @@ export default function Page() {
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [isLiveAnalysis, setIsLiveAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string>();
+  const prefetchedConceptDetails = useRef(
+    new Map<string, ConceptDetailsResult>(),
+  );
   const [conceptDetailsResult, setConceptDetailsResult] =
     useState<ConceptDetailsResult>();
   const [isRepositioning, setIsRepositioning] = useState(false);
@@ -1132,8 +1131,15 @@ export default function Page() {
       : conceptDetailsResult?.highlightId === selected.id
         ? conceptDetailsResult.status
         : "loading";
+  const isResolvingManualHighlight =
+    sourceStatus === "loading" && selected?.id.startsWith("manual-");
   const visibleSources = selected
-    ? getRelevantSources(selected.label, selected.trustedSourceQueries)
+    ? getPreferredSources(
+        selected.label,
+        selected.trustedSourceQueries,
+        selected.referenceLinks,
+        conceptDetails?.sources,
+      )
     : (conceptDetails?.sources ?? []);
 
   useEffect(
@@ -1143,13 +1149,15 @@ export default function Page() {
     [imageUrl],
   );
   useEffect(() => {
-    if (screen !== "processing" || isLiveAnalysis) return;
+    if (screen !== "processing") return;
     const timer = window.setInterval(
       () =>
         setStage((current) => {
           if (current >= stages.length - 1) {
             window.clearInterval(timer);
-            window.setTimeout(() => setScreen("trace"), 650);
+            if (!isLiveAnalysis) {
+              window.setTimeout(() => setScreen("trace"), 650);
+            }
             return current;
           }
           return current + 1;
@@ -1172,6 +1180,12 @@ export default function Page() {
   useEffect(() => {
     if (screen !== "trace" || !selected) return;
 
+    const cached = prefetchedConceptDetails.current.get(selected.id);
+    if (cached) {
+      queueMicrotask(() => setConceptDetailsResult(cached));
+      return;
+    }
+
     const highlightId = selected.id;
     const controller = new AbortController();
     void fetch(`${apiBaseUrl}/api/concept-details`, {
@@ -1191,7 +1205,9 @@ export default function Page() {
       })
       .then((details) => {
         if (controller.signal.aborted) return;
-        setConceptDetailsResult({ highlightId, status: "ready", details });
+        const result = { highlightId, status: "ready" as const, details };
+        prefetchedConceptDetails.current.set(highlightId, result);
+        setConceptDetailsResult(result);
       })
       .catch((error: unknown) => {
         if ((error as Error).name !== "AbortError") {
@@ -1202,6 +1218,43 @@ export default function Page() {
     return () => controller.abort();
   }, [screen, selected]);
 
+  useEffect(() => {
+    if (screen !== "trace") return;
+
+    const controller = new AbortController();
+    for (const region of regions) {
+      if (region.id === selected?.id || region.id.startsWith("manual-"))
+        continue;
+      if (prefetchedConceptDetails.current.has(region.id)) continue;
+
+      void fetch(`${apiBaseUrl}/api/concept-details`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          label: region.label,
+          transcription: region.transcription,
+          explanation: region.explanation,
+          trusted_source_queries: region.trustedSourceQueries ?? [],
+        }),
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("Unable to retrieve sources.");
+          return (await response.json()) as ConceptDetails;
+        })
+        .then((details) => {
+          if (controller.signal.aborted) return;
+          prefetchedConceptDetails.current.set(region.id, {
+            highlightId: region.id,
+            status: "ready",
+            details,
+          });
+        })
+        .catch(() => undefined);
+    }
+
+    return () => controller.abort();
+  }, [regions, screen, selected?.id]);
   function selectNotebook(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     if (!files.length) return;
@@ -1783,14 +1836,27 @@ export default function Page() {
             aria-valuemax={stages.length}
             aria-valuenow={stage + 1}
           >
-            <i style={{ width: `${((stage + 1) / stages.length) * 100}%` }} />
+            <i
+              className={isLiveAnalysis ? "is-live" : undefined}
+              style={{
+                width: `${
+                  isLiveAnalysis
+                    ? Math.min(88, 28 + stage * 20)
+                    : ((stage + 1) / stages.length) * 100
+                }%`,
+              }}
+            />
           </div>
           <div className="progress-list">
             {stages.map((item, index) => (
               <div key={item} className={index <= stage ? "done" : ""}>
                 <i>{index < stage ? "✓" : index === stage ? "" : ""}</i>
                 <span>{item}</span>
-                {index === stage ? <small>Working</small> : null}
+                {index === stage ? (
+                  <small className="working-status" aria-label="Working">
+                    Working<span aria-hidden="true">...</span>
+                  </small>
+                ) : null}
               </div>
             ))}
           </div>
@@ -1822,7 +1888,7 @@ export default function Page() {
                 <span>
                   <b>{regions.length}</b> highlights found
                 </span>
-                <button onClick={addRegion}>＋ Add highlight</button>
+                <button onClick={addRegion}>+ Add highlight</button>
                 <button
                   className={
                     isRepositioning ? "move-button active" : "move-button"
@@ -2086,7 +2152,7 @@ export default function Page() {
                 onClick={() => void openConceptGraph()}
               >
                 {graphStatus === "loading"
-                  ? "Updating graph…"
+                  ? "Updating graph..."
                   : "Concept graph"}
               </button>
               <button
@@ -2097,7 +2163,7 @@ export default function Page() {
                   setIsFlashcardDrawerOpen(true);
                 }}
               >
-                {isGeneratingFlashcards ? "Preparing cards…" : "Flashcards"}
+                {isGeneratingFlashcards ? "Preparing cards..." : "Flashcards"}
               </button>
               <button
                 className={
@@ -2269,15 +2335,16 @@ export default function Page() {
                 <div className="study-note">
                   <p className="detail-label">Quick explanation</p>
                   <p>
-                    {conceptDetails?.definition ??
-                      selected.explanation ??
-                      `You marked “${selected.label}” to revisit. Explore the explanation and links to build on it.`}
+                    {isResolvingManualHighlight
+                      ? `Looking up “${selected.label}”…`
+                      : conceptDetails?.definition ??
+                        selected.explanation ??
+                        `You marked "${selected.label}" to revisit. Explore the explanation and links to build on it.`}
                   </p>
                 </div>
                 <div className="reference-list">
                   <div className="reference-heading">
                     <p className="detail-label">Useful links</p>
-                    {sourceStatus === "loading" ? <span>Updating…</span> : null}
                   </div>
                   {visibleSources.map((source) => (
                     <a
@@ -2291,7 +2358,7 @@ export default function Page() {
                   ))}
                   {!visibleSources.length && sourceStatus === "loading" ? (
                     <p className="reference-loading">
-                      Finding approved sources…
+                      Finding reliable sources…
                     </p>
                   ) : null}
                   {!visibleSources.length && sourceStatus === "unavailable" ? (

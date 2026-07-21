@@ -70,7 +70,7 @@ describe("ConceptGraph", () => {
     expect(onOpenSource).toHaveBeenCalledWith("page-2", "region-atp");
   });
 
-  it("labels low confidence relationships for review", () => {
+  it("keeps unverified relationships off the canvas", () => {
     render(
       <ConceptGraph
         graph={{
@@ -90,10 +90,27 @@ describe("ConceptGraph", () => {
       />,
     );
 
-    expect(screen.getByText("Review")).toBeInTheDocument();
-    expect(screen.getByTestId("edge-low")).toHaveClass("review-required");
+    expect(screen.queryByTestId("edge-low")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("No verified relationships found in these notes yet."),
+    ).toBeInTheDocument();
   });
 
+  it("draws a high-confidence, evidence-backed relationship automatically", () => {
+    render(
+      <ConceptGraph
+        graph={graphFixture}
+        status="ready"
+        onOpenSource={vi.fn()}
+        onCreateFlashcards={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("edge-edge-strong")).toBeInTheDocument();
+    expect(screen.getByText("Verified connections")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove link" }));
+    expect(screen.queryByTestId("edge-edge-strong")).not.toBeInTheDocument();
+  });
   it("keeps the previous graph visible while an update is pending", () => {
     render(
       <ConceptGraph
@@ -104,7 +121,7 @@ describe("ConceptGraph", () => {
       />,
     );
 
-    expect(screen.getByText("Graph update pending")).toBeInTheDocument();
+    expect(screen.getByText("Canvas update pending")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Cellular respiration, page 1" }),
     ).toBeInTheDocument();
@@ -122,7 +139,9 @@ describe("ConceptGraph", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry graph update" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Retry canvas update" }),
+    );
     expect(onRetry).toHaveBeenCalledOnce();
   });
 });

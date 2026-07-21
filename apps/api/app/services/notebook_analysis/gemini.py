@@ -11,26 +11,45 @@ Analyze this single photographed notebook page for an interactive study surface.
 Return only the schema-defined JSON result.
 
 Rules:
-- Transcribe only clearly visible handwritten or printed text.
-- Use a compact digital-notebook outline for typed_text: write a short heading on
-  its own line, then one `- ` bullet per distinct fact. Keep a person or concept
-  and its contribution on the same bullet using `Name ? contribution` when that
-  structure is visible in the notes. Put supporting detail on the next indented line.
-- Do not copy a long page summary into typed_text. page_summary is separate metadata.
-- Correct merged words and obvious OCR noise only when the image makes the intended
-  wording clear. If a fragment remains unreadable or is only OCR gibberish, omit it
-  rather than displaying it as a broken sentence.
-- Each region needs a concise label and a highlight_text phrase that appears verbatim
-  in typed_text. Highlight only unique key concepts of one to five words, never a
-  full sentence, OCR line, heading, or generic placeholder.
-- Return three to eight non-overlapping regions only when the concepts are clear.
-- Use stable ids: region_1, region_2, and relationship_1, relationship_2.
+- Treat the photograph as the source of truth. First determine the page's upright
+  reading orientation from the image. OCR/layout data is optional, fallible evidence:
+  it may be rotated, faint, or garbled. Ignore it whenever it conflicts with the image.
+- Never reproduce punctuation-heavy, digit-heavy, or nonsensical OCR fragments in
+  typed_text. Omit an unclear line rather than guessing or displaying gibberish.
+- Preserve the source order and visible structure. Do not turn notes into a prose
+  summary or merge separate facts.
+- Format typed_text as a compact Markdown outline using only this contract:
+  * Use `# Topic` only when the source visibly contains a real topic heading.
+  * Use `- fact` for a top-level bullet and `  - detail` for an indented supporting detail.
+  * Use `1. fact` only when the source visibly uses a numbered sequence.
+  * Keep a visible name or term and the contribution immediately following it together
+    on one bullet: `- Name - contribution`.
+- Never promote a person, author, example, or the first list item to a heading. If no
+  real topic heading is visible, omit the heading.
+- Preserve every visible name, term, and contribution. If a name is on one line and
+  its contribution is on the next, combine them into that same bullet. Never drop the
+  name, turn it into a heading, or attach it to the wrong contribution.
+- When the structure is uncertain, preserve the original lines as separate bullets
+  instead of guessing a hierarchy.
+- Do not copy a long page summary into typed_text; page_summary is separate metadata.
+- Omit unreadable OCR fragments rather than showing OCR gibberish.
+-
+- Every region needs a concise label and a highlight_text phrase that appears verbatim
+  in typed_text. highlight_text must be a key study concept of one to five words.
+- Never use a whole sentence, OCR line, heading, or generic placeholder as
+  highlight_text. Headings stay plain text in the PDF.
 - Use only these region types: concept, definition, question, example, or other.
+- Never use generic labels such as Heading, Subheading, Content, Notes, List, or Definition.
+- Return three to eight unique, non-overlapping regions only when the concepts are clear.
+- Use stable ids: region_1, region_2, and relationship_1, relationship_2.
 - Bounding boxes are normalized to 0.0 through 1.0 relative to the entire image.
 - Add at most 6 relationships, only for unambiguous drawn arrows or connecting lines.
 - Detect star and question markers only when clearly visible.
 - Use low confidence and an uncertainty note when unsure.
 - Include a short page summary.
+- Give every region one student-friendly sentence in explanation.
+- Give every region two or three concise trusted_source_queries. They must be plain
+  search phrases, never URLs, domains, citations, or source names.
 - Prefer empty regions, relationships, or markers over invented information.
 """.strip()
 

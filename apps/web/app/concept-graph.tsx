@@ -1,6 +1,7 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type GraphSource = {
   page_id: string;
@@ -29,6 +30,15 @@ export type ConceptGraphData = {
 
 export type GraphStatus = "idle" | "loading" | "ready" | "pending" | "error";
 
+type CanvasGroup =
+  "ungrouped" | "process" | "definition" | "example" | "review";
+type CanvasNode = ConceptGraphData["nodes"][number] & {
+  x: number;
+  y: number;
+  group: CanvasGroup;
+};
+type CanvasEdge = ConceptGraphData["edges"][number];
+
 type ConceptGraphProps = {
   graph: ConceptGraphData | null;
   status: GraphStatus;
@@ -37,14 +47,24 @@ type ConceptGraphProps = {
   onCreateFlashcards?: (nodeId: string) => void;
 };
 
-function positionForNode(index: number, count: number) {
-  if (count === 1) return { x: 50, y: 50 };
-  const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
-  const radiusX = count > 6 ? 36 : 30;
-  const radiusY = count > 6 ? 35 : 29;
+const AUTO_LINK_CONFIDENCE = 0.7;
+const GROUP_OPTIONS: Array<{ value: CanvasGroup; label: string }> = [
+  { value: "ungrouped", label: "Ungrouped" },
+  { value: "process", label: "Process" },
+  { value: "definition", label: "Definitions" },
+  { value: "example", label: "Examples" },
+  { value: "review", label: "Review later" },
+];
+
+function initialPosition(index: number, count: number) {
+  if (count === 1) return { x: 50, y: 48 };
+  const columns = Math.min(3, Math.ceil(Math.sqrt(count)));
+  const row = Math.floor(index / columns);
+  const column = index % columns;
+  const rows = Math.ceil(count / columns);
   return {
-    x: 50 + Math.cos(angle) * radiusX,
-    y: 50 + Math.sin(angle) * radiusY,
+    x: 17 + (column / Math.max(columns - 1, 1)) * 66,
+    y: 18 + (row / Math.max(rows - 1, 1)) * 64,
   };
 }
 
@@ -58,9 +78,46 @@ export function ConceptGraph({
   onRetry,
   onOpenSource,
 }: ConceptGraphProps) {
-  const [selectedId, setSelectedId] = useState(graph?.nodes[0]?.id ?? "");
-  const selected =
-    graph?.nodes.find((node) => node.id === selectedId) ?? graph?.nodes[0];
+  const graphKey = graph
+    ? `${graph.nodes.map((node) => node.id).join("|")}::${graph.edges.map((edge) => edge.id).join("|")}`
+    : "";
+  const [nodes, setNodes] = useState<CanvasNode[]>([]);
+  const [edges, setEdges] = useState<CanvasEdge[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const drag = useRef<
+    | {
+        id: string;
+        startX: number;
+        startY: number;
+        nodeX: number;
+        nodeY: number;
+      }
+    | undefined
+  >(undefined);
+  useEffect(() => {
+    const nextNodes = (graph?.nodes ?? []).map((node, index, allNodes) => ({
+      ...node,
+      ...initialPosition(index, allNodes.length),
+      group: "ungrouped" as CanvasGroup,
+    }));
+    setNodes(nextNodes);
+    setEdges(
+      (graph?.edges ?? []).filter(
+        (edge) =>
+          !edge.review_required && edge.confidence >= AUTO_LINK_CONFIDENCE,
+      ),
+    );
+    setSelectedId(nextNodes[0]?.id ?? "");
+  }, [graphKey, graph]);
+
+  const nodeById = useMemo(
+    () => new Map(nodes.map((node) => [node.id, node])),
+    [nodes],
+  );
+  const selected = nodeById.get(selectedId) ?? nodes[0];
+  const selectedLinks = edges.filter(
+    (edge) => edge.source === selected?.id || edge.target === selected?.id,
+  );
 
   if (!graph?.nodes.length) {
     return (
@@ -69,64 +126,99 @@ export function ConceptGraph({
         aria-labelledby="concept-graph-title"
       >
         <p className="concept-graph-eyebrow">Your notebook connections</p>
-        <h2 id="concept-graph-title">Your concept graph</h2>
+        <h2 id="concept-graph-title">Your study canvas</h2>
         <p>
           {status === "loading"
-            ? "Building connections from your approved scans."
-            : "Scan and approve more notebook concepts to reveal connections."}
+            ? "Preparing concepts from your approved scan."
+            : "Scan and approve notebook concepts to start a study canvas."}
         </p>
         {status === "error" && onRetry ? (
           <button type="button" className="secondary-button" onClick={onRetry}>
-            Retry graph update
+            Retry canvas update
           </button>
         ) : null}
       </section>
     );
   }
 
-  const nodeIndexes = new Map(
-    graph.nodes.map((node, index) => [node.id, index]),
-  );
-  const connections = graph.edges
-    .filter(
-      (edge) => edge.source === selected?.id || edge.target === selected?.id,
-    )
-    .map((edge) => {
-      const otherId = edge.source === selected?.id ? edge.target : edge.source;
-      const otherNode = graph.nodes.find((node) => node.id === otherId);
-      return otherNode
-        ? {
-            node: otherNode,
-            relation: edge.review_required
-              ? "Connection to review"
-              : edge.label || "Related concept",
-          }
-        : undefined;
-    })
-    .filter(
-      (
-        connection,
-      ): connection is {
-        node: ConceptGraphData["nodes"][number];
-        relation: string;
-      } => Boolean(connection),
+  function startDrag(
+    event: React.PointerEvent<HTMLButtonElement>,
+    node: CanvasNode,
+  ) {
+    drag.current = {
+      id: node.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      nodeX: node.x,
+      nodeY: node.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveNode(event: React.PointerEvent<HTMLButtonElement>) {
+    const active = drag.current;
+    const host = event.currentTarget
+      .closest(".study-canvas-field")
+      ?.getBoundingClientRect();
+    if (!active || !host) return;
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === active.id
+          ? {
+              ...node,
+              x: Math.max(
+                8,
+                Math.min(
+                  92,
+                  active.nodeX +
+                    ((event.clientX - active.startX) / host.width) * 100,
+                ),
+              ),
+              y: Math.max(
+                10,
+                Math.min(
+                  90,
+                  active.nodeY +
+                    ((event.clientY - active.startY) / host.height) * 100,
+                ),
+              ),
+            }
+          : node,
+      ),
     );
-  const reviewCount = graph.edges.filter((edge) => edge.review_required).length;
+  }
+
+  function deleteSelected() {
+    if (!selected) return;
+    setNodes((current) => current.filter((node) => node.id !== selected.id));
+    setEdges((current) =>
+      current.filter(
+        (edge) => edge.source !== selected.id && edge.target !== selected.id,
+      ),
+    );
+    setSelectedId(nodes.find((node) => node.id !== selected.id)?.id ?? "");
+  }
+
+  function deleteLink(edgeId: string) {
+    setEdges((current) => current.filter((edge) => edge.id !== edgeId));
+  }
 
   return (
-    <section className="concept-graph-layout" aria-label="Concept graph">
-      <div className="concept-graph-canvas">
-        <header className="concept-graph-heading">
+    <section className="study-canvas-layout" aria-label="Study canvas">
+      <div className="study-canvas-main">
+        <header className="study-canvas-heading">
           <div>
-            <p className="concept-graph-eyebrow">Approved scanned pages</p>
-            <h1>Your concept graph</h1>
-            <p className="concept-graph-summary">
-              {graph.nodes.length} concepts · {graph.edges.length} relationships
-              {reviewCount ? ` · ${reviewCount} to review` : ""}
+            <p className="concept-graph-eyebrow">
+              OpenAI-assessed notebook concepts
+            </p>
+            <h1>Your study canvas</h1>
+            <p>
+              OpenAI adds only high-confidence connections supported by your
+              notes. Drag cards or remove anything that does not help.
             </p>
           </div>
           {status === "pending" ? (
-            <p role="status">Graph update pending</p>
+            <p role="status">Canvas update pending</p>
           ) : null}
           {status === "error" && onRetry ? (
             <button
@@ -134,105 +226,75 @@ export function ConceptGraph({
               className="secondary-button"
               onClick={onRetry}
             >
-              Retry graph update
+              Retry canvas update
             </button>
           ) : null}
         </header>
 
-        <div className="concept-graph-field">
-          <svg viewBox="0 0 100 100" aria-label="Concept relationships">
-            {graph.edges.map((edge) => {
-              const sourceIndex = nodeIndexes.get(edge.source) ?? 0;
-              const targetIndex = nodeIndexes.get(edge.target) ?? 0;
-              const source = positionForNode(sourceIndex, graph.nodes.length);
-              const target = positionForNode(targetIndex, graph.nodes.length);
+        <div className="study-canvas-field">
+          <svg viewBox="0 0 100 100" aria-label="Verified study connections">
+            {edges.map((edge) => {
+              const source = nodeById.get(edge.source);
+              const target = nodeById.get(edge.target);
+              if (!source || !target) return null;
               return (
-                <g
-                  key={edge.id}
-                  data-testid={`edge-${edge.id}`}
-                  className={
-                    edge.review_required ? "review-required" : undefined
-                  }
-                >
+                <g key={edge.id} data-testid={`edge-${edge.id}`}>
                   <line
-                    className="concept-graph-edge"
+                    className="study-canvas-edge"
                     x1={source.x}
                     y1={source.y}
                     x2={target.x}
                     y2={target.y}
                   />
                   <text
-                    className="concept-graph-edge-label"
+                    className="study-canvas-edge-label"
                     x={(source.x + target.x) / 2}
                     y={(source.y + target.y) / 2 - 2}
                   >
-                    {edge.review_required ? "Review" : edge.label || "Related"}
+                    {edge.label}
                   </text>
                 </g>
               );
             })}
           </svg>
-
-          {graph.nodes.map((node, index) => {
-            const position = positionForNode(index, graph.nodes.length);
-            const firstSource = node.sources[0];
-            return (
-              <button
-                key={node.id}
-                type="button"
-                className="concept-graph-node"
-                style={{ left: `${position.x}%`, top: `${position.y}%` }}
-                aria-pressed={node.id === selected?.id}
-                aria-label={`${node.label}, ${pageLabel(firstSource.page_id)}`}
-                onClick={() => setSelectedId(node.id)}
-              >
-                <strong>{node.label}</strong>
-                <small>{firstSource.page_id.toUpperCase()}</small>
-              </button>
-            );
-          })}
+          {nodes.map((node) => (
+            <button
+              key={node.id}
+              type="button"
+              className={`study-canvas-node group-${node.group} ${node.id === selected?.id ? "is-selected" : ""}`}
+              style={{ left: `${node.x}%`, top: `${node.y}%` }}
+              aria-pressed={node.id === selected?.id}
+              aria-label={`${node.label}, ${pageLabel(node.sources[0].page_id)}`}
+              onClick={() => setSelectedId(node.id)}
+              onPointerDown={(event) => startDrag(event, node)}
+              onPointerMove={moveNode}
+              onPointerUp={() => {
+                drag.current = undefined;
+              }}
+            >
+              <strong>{node.label}</strong>
+              <small>
+                {["theme", "category", "outcome"].includes(node.type)
+                  ? node.type
+                  : node.group === "ungrouped"
+                    ? node.sources[0].page_id.toUpperCase()
+                    : node.group}
+              </small>
+            </button>
+          ))}
         </div>
       </div>
 
-      {selected ? (
-        <aside
-          className="concept-graph-detail"
-          aria-label="Selected concept details"
-        >
-          <p className="concept-graph-eyebrow">Selected concept</p>
-          <h2>{selected.label}</h2>
-          <p>
-            Connected to {connections.length} approved concept
-            {connections.length === 1 ? "" : "s"}.
-          </p>
-
-          <div className="concept-graph-source">
-            <strong>From {pageLabel(selected.sources[0].page_id)}</strong>
-            <blockquote>{selected.sources[0].excerpt}</blockquote>
-          </div>
-
-          {connections.length ? (
-            <div className="concept-graph-connections">
-              <strong>Connected concepts</strong>
-              <ul>
-                {connections.map(({ node, relation }) => (
-                  <li key={node.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(node.id)}
-                    >
-                      {node.label}
-                    </button>
-                    <small>{relation}</small>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <p>Scan and approve more pages to reveal connections.</p>
-          )}
-
-          <div className="concept-graph-actions">
+      <aside className="study-canvas-panel" aria-label="Study canvas controls">
+        {selected ? (
+          <>
+            <p className="concept-graph-eyebrow">
+              {["theme", "category", "outcome"].includes(selected.type)
+                ? "Learning connection"
+                : "From your notes"}
+            </p>
+            <h2>{selected.label}</h2>
+            <p className="study-canvas-source">{selected.sources[0].excerpt}</p>
             <button
               type="button"
               className="secondary-button"
@@ -245,9 +307,52 @@ export function ConceptGraph({
             >
               Open scanned {pageLabel(selected.sources[0].page_id)}
             </button>
-          </div>
-        </aside>
-      ) : null}
+            <button
+              type="button"
+              className="canvas-delete"
+              onClick={deleteSelected}
+            >
+              Remove concept
+            </button>
+            <div className="study-canvas-links">
+              <strong>Verified connections</strong>
+              {selectedLinks.length ? (
+                <ul>
+                  {selectedLinks.map((edge) => {
+                    const other = nodeById.get(
+                      edge.source === selected.id ? edge.target : edge.source,
+                    );
+                    return (
+                      <li key={edge.id}>
+                        <span>
+                          {edge.label}{" "}
+                          <button
+                            type="button"
+                            onClick={() => other && setSelectedId(other.id)}
+                          >
+                            {other?.label}
+                          </button>
+                        </span>
+                        <button
+                          type="button"
+                          className="canvas-delete"
+                          onClick={() => deleteLink(edge.id)}
+                        >
+                          Remove link
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="study-canvas-empty">
+                  No verified relationships found in these notes yet.
+                </p>
+              )}
+            </div>
+          </>
+        ) : null}
+      </aside>
     </section>
   );
 }

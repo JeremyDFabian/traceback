@@ -153,9 +153,13 @@ def test_refresh_retries_pending_graph_without_resaving_pages(tmp_path, monkeypa
 
     try:
         for page_id, label in (("page-1", "ATP"), ("page-2", "Mitochondria")):
+            payload = approved_page_payload(page_id, label)
+            if label == "Mitochondria":
+                payload["typed_text"] = "Mitochondria produces ATP."
+                payload["regions"][0]["transcription"] = "Mitochondria produces ATP."
             client.post(
                 f"/api/sessions/{SESSION_ID}/pages/{page_id}/confirm",
-                json=approved_page_payload(page_id, label),
+                json=payload,
             )
         monkeypatch.setattr(
             learning,

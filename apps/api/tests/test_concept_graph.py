@@ -1,6 +1,11 @@
 from app.schemas.analysis import Relationship
 from app.schemas.learning import ApprovedNotebookPage, ApprovedNotebookPages, GraphEdge
-from app.services.concept_graph import build_concept_graph, generate_cross_page_edges
+from app.services.concept_graph import (
+    GeneratedGraphNode,
+    GeneratedStudyEdges,
+    build_concept_graph,
+    generate_cross_page_edges,
+)
 
 
 def page(
@@ -45,7 +50,7 @@ def test_build_graph_merges_labels_and_keeps_every_source() -> None:
     assert [source.page_id for source in graph.nodes[0].sources] == ["page-1", "page-2"]
 
 
-def test_build_graph_discards_unknown_endpoints_and_marks_review() -> None:
+def test_build_graph_discards_unknown_or_low_confidence_edges() -> None:
     pages = ApprovedNotebookPages(
         pages=[
             page("page-1", "ATP", "ATP stores energy."),
@@ -73,8 +78,31 @@ def test_build_graph_discards_unknown_endpoints_and_marks_review() -> None:
         ],
     )
 
-    assert [edge.id for edge in graph.edges] == ["valid"]
-    assert graph.edges[0].review_required is True
+    assert graph.edges == []
+
+
+def test_build_graph_rejects_generated_edges_with_invented_relationship_words() -> None:
+    approved_page = page("page-1", "Mitochondria", "Mitochondria produce ATP.")
+    approved_page.regions.append(
+        approved_page.regions[0].model_copy(
+            update={"id": "region-2", "label": "ATP", "transcription": "ATP"}
+        )
+    )
+
+    graph = build_concept_graph(
+        ApprovedNotebookPages(pages=[approved_page]),
+        generated_edges=[
+            GraphEdge(
+                id="invented",
+                source="mitochondria",
+                target="atp",
+                label="relates process to food chain",
+                confidence=0.91,
+            )
+        ],
+    )
+
+    assert graph.edges == []
 
 
 def test_build_graph_preserves_valid_within_page_relationships() -> None:
@@ -101,19 +129,19 @@ def test_build_graph_preserves_valid_within_page_relationships() -> None:
     assert graph.edges[0].review_required is False
 
 
-def test_generate_cross_page_edges_uses_injected_generator() -> None:
-    pages = ApprovedNotebookPages(
-        pages=[
-            page("page-1", "Mitochondria", "Mitochondria produce ATP."),
-            page("page-2", "ATP", "ATP stores usable chemical energy."),
-        ]
+def test_generate_cross_page_edges_supports_a_single_page_study_map() -> None:
+    approved_page = page("page-1", "Mitochondria", "Mitochondria produce ATP.")
+    approved_page.regions.append(
+        approved_page.regions[0].model_copy(
+            update={"id": "region-2", "label": "ATP", "transcription": "ATP"}
+        )
     )
 
     edges = generate_cross_page_edges(
-        pages,
+        ApprovedNotebookPages(pages=[approved_page]),
         generator=lambda _: [
             GraphEdge(
-                id="cross-1",
+                id="within-page-1",
                 source="mitochondria",
                 target="atp",
                 label="produces",
@@ -123,3 +151,64 @@ def test_generate_cross_page_edges_uses_injected_generator() -> None:
     )
 
     assert edges[0].label == "produces"
+
+
+def test_build_graph_adds_general_source_anchored_learning_structure() -> None:
+    pages = ApprovedNotebookPages(
+        pages=[
+            page("page-1", "Handwashing", "Semmelweis promoted handwashing."),
+            page("page-2", "Smallpox vaccination", "Jenner developed smallpox vaccination."),
+        ]
+    )
+    generated = GeneratedStudyEdges(
+        [
+            GraphEdge(
+                id="prevention-1",
+                source="handwashing",
+                target="prevention",
+                label="helps prevent",
+                confidence=0.91,
+            ),
+            GraphEdge(
+                id="prevention-2",
+                source="smallpox vaccination",
+                target="prevention",
+                label="helps prevent",
+                confidence=0.91,
+            ),
+            GraphEdge(
+                id="theme-1",
+                source="prevention",
+                target="medical advances",
+                label="belongs to",
+                confidence=0.9,
+            ),
+        ],
+        [
+            GeneratedGraphNode(
+                id="prevention",
+                label="Prevention",
+                type="category",
+                source_concept_ids=["handwashing", "smallpox vaccination"],
+                confidence=0.91,
+            ),
+            GeneratedGraphNode(
+                id="medical advances",
+                label="Medical advances",
+                type="theme",
+                source_concept_ids=["handwashing", "smallpox vaccination"],
+                confidence=0.9,
+            ),
+        ],
+    )
+
+    graph = build_concept_graph(pages, generated)
+
+    assert {node.id for node in graph.nodes} == {
+        "handwashing",
+        "smallpox vaccination",
+        "prevention",
+        "medical advances",
+    }
+    assert {edge.label for edge in graph.edges} == {"helps prevent", "belongs to"}
+    assert next(node for node in graph.nodes if node.id == "prevention").type == "category"

@@ -103,9 +103,9 @@ def get_paddleocr_reader() -> Any:
             text_recognition_model_name="en_PP-OCRv5_mobile_rec",
             text_det_limit_side_len=640,
             text_det_limit_type="max",
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False,
+            use_doc_orientation_classify=True,
+            use_doc_unwarping=True,
+            use_textline_orientation=True,
         )
     finally:
         if previous_home is None:

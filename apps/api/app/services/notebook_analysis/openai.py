@@ -13,23 +13,32 @@ Analyze this single photographed notebook page for an interactive study surface.
 Return only the requested structured result.
 
 Rules:
-- First read the supplied OCR/layout JSON as the transcription draft. Use the image to
-  correct obvious OCR character and spelling mistakes only when the handwriting makes
-  the correction unambiguous. Do not invent missing content.
-- Produce typed_text as clean, spaced study notes: preserve headings, use blank lines
-  between sections, and put each detected numbered item on its own line as `1. text`.
-- Use a compact digital-notebook outline for typed_text: write a short heading on
-  its own line, then one `- ` bullet per distinct fact. Keep a person or concept
-  and its contribution on the same bullet using `Name ? contribution` when that
-  structure is visible in the notes. Put supporting detail on the next indented line.
-- Do not copy a long page summary into typed_text. page_summary is separate metadata.
-- Correct merged words and obvious OCR noise only when the image makes the intended
-  wording clear. If a fragment remains unreadable or is only OCR gibberish, omit it
-  rather than displaying it as a broken sentence.
-- Use the supplied OCR/layout regions as the primary evidence for bounding boxes.
+- Treat the photograph as the source of truth. First determine the page's upright
+  reading orientation from the image. OCR/layout data is optional, fallible evidence:
+  it may be rotated, faint, or garbled. Ignore it whenever it conflicts with the image.
+- Never reproduce punctuation-heavy, digit-heavy, or nonsensical OCR fragments in
+  typed_text. Omit an unclear line rather than guessing or displaying gibberish.
+- Preserve the source order and visible structure. Do not turn notes into a prose
+  summary or merge separate facts.
+- Format typed_text as a compact Markdown outline using only this contract:
+  * Use `# Topic` only when the source visibly contains a real topic heading.
+  * Use `- fact` for a top-level bullet and `  - detail` for an indented supporting detail.
+  * Use `1. fact` only when the source visibly uses a numbered sequence.
+  * Keep a visible name or term and the contribution immediately following it together
+    on one bullet: `- Name - contribution`.
+- Never promote a person, author, example, or the first list item to a heading. If no
+  real topic heading is visible, omit the heading.
+- Preserve every visible name, term, and contribution. If a name is on one line and
+  its contribution is on the next, combine them into that same bullet. Never drop the
+  name, turn it into a heading, or attach it to the wrong contribution.
+- When the structure is uncertain, preserve the original lines as separate bullets
+  instead of guessing a hierarchy.
+- Do not copy a long page summary into typed_text; page_summary is separate metadata.
+- Omit unreadable OCR fragments rather than showing OCR gibberish.
+- Use supplied OCR/layout regions as primary evidence for bounding boxes.
 - Every region needs a concise label and a highlight_text phrase that appears verbatim
   in typed_text. highlight_text must be a key study concept of one to five words.
-- Never use a whole sentence, OCR line, heading, or a generic placeholder as
+- Never use a whole sentence, OCR line, heading, or generic placeholder as
   highlight_text. Headings stay plain text in the PDF.
 - Use only these region types: concept, definition, question, example, or other.
 - Never use generic labels such as Heading, Subheading, Content, Notes, List, or Definition.
@@ -75,8 +84,8 @@ def analyze_notebook_with_openai(
                         {
                             "type": "input_text",
                             "text": (
-                                "Analyze this notebook image using these OCR/layout regions as "
-                                "grounding data. Return the requested structured result.\n\n"
+                                "Analyze the notebook photograph as primary evidence. OCR/layout "
+                                "regions are optional hints and may be wrong for rotated or faint handwriting. Return the requested structured result.\n\n"
                                 f"OCR/layout regions:\n{serialize_ocr_regions(ocr_regions or [])}"
                             ),
                         },

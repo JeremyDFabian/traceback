@@ -37,7 +37,7 @@ def get_concept_details(
     settings: Settings | None = None,
 ) -> ConceptDetailsResult:
     active_settings = settings or get_settings()
-    sources = build_search_sources(request.label, request.trusted_source_queries)
+    sources = find_live_sources(request, active_settings)
 
     if request.explanation:
         return ConceptDetailsResult(
@@ -72,6 +72,52 @@ def get_concept_details(
         confidence=analysis.details.confidence,
         warnings=analysis.warnings,
     )
+
+
+def find_live_sources(request: ConceptDetailsRequest, settings: Settings) -> list[ConceptSource]:
+    api_key = settings.openai_api_key
+    if (
+        not settings.openai_analysis_enabled
+        or api_key is None
+        or not api_key.get_secret_value().strip()
+    ):
+        return []
+
+    try:
+        context = request.transcription or "No notebook context was provided."
+        response = OpenAI(
+            api_key=api_key.get_secret_value(), timeout=20.0, max_retries=0
+        ).responses.create(
+            model=settings.openai_vision_model,
+            tools=[{"type": "web_search"}],
+            input=(
+                "Find up to three reputable, directly relevant sources for this study concept. "
+                "Use web search and cite only sources you found.\n"
+                f"Concept: {request.label}\nNotebook context: {context}"
+            ),
+        )
+        payload = response.model_dump()
+    except OpenAIError:
+        return []
+
+    sources: list[ConceptSource] = []
+    seen_urls: set[str] = set()
+    for item in payload.get("output", []):
+        for part in item.get("content", []):
+            for annotation in part.get("annotations", []):
+                if annotation.get("type") != "url_citation":
+                    continue
+                url = annotation.get("url")
+                title = annotation.get("title")
+                if not isinstance(url, str) or not url or url in seen_urls:
+                    continue
+                if not isinstance(title, str) or not title.strip():
+                    title = request.label
+                sources.append(ConceptSource(title=title.strip(), url=url))
+                seen_urls.add(url)
+                if len(sources) == 3:
+                    return sources
+    return sources
 
 
 def analyze_concept_with_openai(
