@@ -2337,9 +2337,9 @@ export default function Page() {
                   <p>
                     {isResolvingManualHighlight
                       ? `Looking up “${selected.label}”…`
-                      : conceptDetails?.definition ??
+                      : (conceptDetails?.definition ??
                         selected.explanation ??
-                        `You marked "${selected.label}" to revisit. Explore the explanation and links to build on it.`}
+                        `You marked "${selected.label}" to revisit. Explore the explanation and links to build on it.`)}
                   </p>
                 </div>
                 <div className="reference-list">
