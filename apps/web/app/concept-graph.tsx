@@ -62,7 +62,10 @@ export function ConceptGraph({
 
   if (!graph?.nodes.length) {
     return (
-      <section className="concept-graph-empty" aria-labelledby="concept-graph-title">
+      <section
+        className="concept-graph-empty"
+        aria-labelledby="concept-graph-title"
+      >
         <p className="concept-graph-eyebrow">Your notebook connections</p>
         <h2 id="concept-graph-title">Your concept graph</h2>
         <p>
@@ -79,9 +82,13 @@ export function ConceptGraph({
     );
   }
 
-  const nodeIndexes = new Map(graph.nodes.map((node, index) => [node.id, index]));
+  const nodeIndexes = new Map(
+    graph.nodes.map((node, index) => [node.id, index]),
+  );
   const connectedLabels = graph.edges
-    .filter((edge) => edge.source === selected?.id || edge.target === selected?.id)
+    .filter(
+      (edge) => edge.source === selected?.id || edge.target === selected?.id,
+    )
     .map((edge) => {
       const otherId = edge.source === selected?.id ? edge.target : edge.source;
       return graph.nodes.find((node) => node.id === otherId)?.label;
@@ -96,9 +103,15 @@ export function ConceptGraph({
             <p className="concept-graph-eyebrow">Approved scanned pages</p>
             <h1>Your concept graph</h1>
           </div>
-          {status === "pending" ? <p role="status">Graph update pending</p> : null}
+          {status === "pending" ? (
+            <p role="status">Graph update pending</p>
+          ) : null}
           {status === "error" && onRetry ? (
-            <button type="button" className="secondary-button" onClick={onRetry}>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onRetry}
+            >
               Retry graph update
             </button>
           ) : null}
@@ -115,7 +128,9 @@ export function ConceptGraph({
                 <g
                   key={edge.id}
                   data-testid={`edge-${edge.id}`}
-                  className={edge.review_required ? "review-required" : undefined}
+                  className={
+                    edge.review_required ? "review-required" : undefined
+                  }
                 >
                   <line
                     className="concept-graph-edge"
@@ -158,7 +173,10 @@ export function ConceptGraph({
       </div>
 
       {selected ? (
-        <aside className="concept-graph-detail" aria-label="Selected concept details">
+        <aside
+          className="concept-graph-detail"
+          aria-label="Selected concept details"
+        >
           <p className="concept-graph-eyebrow">Selected concept</p>
           <h2>{selected.label}</h2>
           <p>
@@ -189,7 +207,10 @@ export function ConceptGraph({
               type="button"
               className="secondary-button"
               onClick={() =>
-                onOpenSource(selected.sources[0].page_id, selected.sources[0].region_id)
+                onOpenSource(
+                  selected.sources[0].page_id,
+                  selected.sources[0].region_id,
+                )
               }
             >
               Open scanned {pageLabel(selected.sources[0].page_id)}

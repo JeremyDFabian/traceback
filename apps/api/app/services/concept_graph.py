@@ -39,7 +39,7 @@ class GeneratedGraphEdge(BaseModel):
 
 
 class GeneratedGraphRelationships(BaseModel):
-    relationships: list[GeneratedGraphEdge] = Field(default_factory=list)
+    relationships: list[GeneratedGraphEdge] = []
 
 
 GraphRelationshipGenerator = Callable[[ApprovedNotebookPages], list[GraphEdge]]

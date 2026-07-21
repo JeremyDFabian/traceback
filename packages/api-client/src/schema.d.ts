@@ -226,6 +226,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/sessions/{session_id}/graph/refresh": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Refresh Graph */
+    post: operations["refresh_graph_api_sessions__session_id__graph_refresh_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/sessions/{session_id}/notebook-page": {
     parameters: {
       query?: never;
@@ -237,6 +254,23 @@ export interface paths {
     put?: never;
     /** Upload Notebook Page */
     post: operations["upload_notebook_page_api_sessions__session_id__notebook_page_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{session_id}/pages/{page_id}/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Confirm Notebook Page */
+    post: operations["confirm_notebook_page_api_sessions__session_id__pages__page_id__confirm_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -307,6 +341,19 @@ export interface components {
       /** Relationships */
       relationships: components["schemas"]["Relationship"][];
     };
+    /** ApprovedNotebookPage */
+    ApprovedNotebookPage: {
+      /** Page Id */
+      page_id: string;
+      /** Page Summary */
+      page_summary: string;
+      /** Regions */
+      regions: components["schemas"]["Region"][];
+      /** Relationships */
+      relationships: components["schemas"]["Relationship"][];
+      /** Typed Text */
+      typed_text: string;
+    };
     /** Body_upload_deck_api_sessions__session_id__deck_post */
     Body_upload_deck_api_sessions__session_id__deck_post: {
       /** File */
@@ -360,6 +407,15 @@ export interface components {
       title: string;
       /** Url */
       url: string;
+    };
+    /** ConfirmPageResponse */
+    ConfirmPageResponse: {
+      /**
+       * Graph Status
+       * @enum {string}
+       */
+      graph_status: "ready" | "pending";
+      page: components["schemas"]["ApprovedNotebookPage"];
     };
     /** DeckExtractionResponse */
     DeckExtractionResponse: {
@@ -465,10 +521,20 @@ export interface components {
     };
     /** GraphEdge */
     GraphEdge: {
+      /**
+       * Confidence
+       * @default 1
+       */
+      confidence?: number;
       /** Id */
       id: string;
       /** Label */
       label: string | null;
+      /**
+       * Review Required
+       * @default false
+       */
+      review_required?: boolean;
       /** Source */
       source: string;
       /** Target */
@@ -476,10 +542,20 @@ export interface components {
     };
     /** GraphNode */
     GraphNode: {
+      /**
+       * Confidence
+       * @default 1
+       */
+      confidence?: number;
       /** Id */
       id: string;
       /** Label */
       label: string;
+      /**
+       * Sources
+       * @default []
+       */
+      sources?: components["schemas"]["GraphSource"][];
       /** Type */
       type: string;
     };
@@ -489,6 +565,16 @@ export interface components {
       edges: components["schemas"]["GraphEdge"][];
       /** Nodes */
       nodes: components["schemas"]["GraphNode"][];
+    };
+    /** GraphSource */
+    GraphSource: {
+      bbox: components["schemas"]["BoundingBox"];
+      /** Excerpt */
+      excerpt: string;
+      /** Page Id */
+      page_id: string;
+      /** Region Id */
+      region_id: string;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -1270,6 +1356,37 @@ export interface operations {
       };
     };
   };
+  refresh_graph_api_sessions__session_id__graph_refresh_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GraphResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   upload_notebook_page_api_sessions__session_id__notebook_page_post: {
     parameters: {
       query?: never;
@@ -1292,6 +1409,42 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["UploadResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  confirm_notebook_page_api_sessions__session_id__pages__page_id__confirm_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+        page_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApprovedNotebookPage"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConfirmPageResponse"];
         };
       };
       /** @description Validation Error */

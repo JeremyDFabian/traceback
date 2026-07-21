@@ -14,7 +14,7 @@ class ApprovedNotebookPage(BaseModel):
 
 
 class ApprovedNotebookPages(BaseModel):
-    pages: list[ApprovedNotebookPage] = Field(default_factory=list)
+    pages: list[ApprovedNotebookPage] = []
 
     @model_validator(mode="after")
     def require_unique_page_ids(self) -> "ApprovedNotebookPages":
@@ -36,7 +36,7 @@ class GraphNode(BaseModel):
     label: str
     type: str
     confidence: float = Field(default=1.0, ge=0, le=1)
-    sources: list[GraphSource] = Field(default_factory=list)
+    sources: list[GraphSource] = []
 
 
 class GraphEdge(BaseModel):

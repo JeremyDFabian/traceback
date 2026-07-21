@@ -26,6 +26,46 @@
         "title": "AnalysisResult",
         "type": "object"
       },
+      "ApprovedNotebookPage": {
+        "properties": {
+          "page_id": {
+            "minLength": 1,
+            "title": "Page Id",
+            "type": "string"
+          },
+          "page_summary": {
+            "title": "Page Summary",
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/Region"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/Relationship"
+            },
+            "title": "Relationships",
+            "type": "array"
+          },
+          "typed_text": {
+            "title": "Typed Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id",
+          "page_summary",
+          "typed_text",
+          "regions",
+          "relationships"
+        ],
+        "title": "ApprovedNotebookPage",
+        "type": "object"
+      },
       "Body_upload_deck_api_sessions__session_id__deck_post": {
         "properties": {
           "file": {
@@ -177,6 +217,21 @@
         },
         "required": ["title", "url"],
         "title": "ConceptSource",
+        "type": "object"
+      },
+      "ConfirmPageResponse": {
+        "properties": {
+          "graph_status": {
+            "enum": ["ready", "pending"],
+            "title": "Graph Status",
+            "type": "string"
+          },
+          "page": {
+            "$ref": "#/components/schemas/ApprovedNotebookPage"
+          }
+        },
+        "required": ["page", "graph_status"],
+        "title": "ConfirmPageResponse",
         "type": "object"
       },
       "DeckExtractionResponse": {
@@ -438,6 +493,13 @@
       },
       "GraphEdge": {
         "properties": {
+          "confidence": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -452,6 +514,11 @@
               }
             ],
             "title": "Label"
+          },
+          "review_required": {
+            "default": false,
+            "title": "Review Required",
+            "type": "boolean"
           },
           "source": {
             "title": "Source",
@@ -468,6 +535,13 @@
       },
       "GraphNode": {
         "properties": {
+          "confidence": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -475,6 +549,14 @@
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GraphSource"
+            },
+            "title": "Sources",
+            "type": "array"
           },
           "type": {
             "title": "Type",
@@ -504,6 +586,28 @@
         },
         "required": ["nodes", "edges"],
         "title": "GraphResponse",
+        "type": "object"
+      },
+      "GraphSource": {
+        "properties": {
+          "bbox": {
+            "$ref": "#/components/schemas/BoundingBox"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "page_id": {
+            "title": "Page Id",
+            "type": "string"
+          },
+          "region_id": {
+            "title": "Region Id",
+            "type": "string"
+          }
+        },
+        "required": ["page_id", "region_id", "excerpt", "bbox"],
+        "title": "GraphSource",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1893,6 +1997,47 @@
         "tags": ["learning"]
       }
     },
+    "/api/sessions/{session_id}/graph/refresh": {
+      "post": {
+        "operationId": "refresh_graph_api_sessions__session_id__graph_refresh_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh Graph",
+        "tags": ["learning"]
+      }
+    },
     "/api/sessions/{session_id}/notebook-page": {
       "post": {
         "operationId": "upload_notebook_page_api_sessions__session_id__notebook_page_post",
@@ -1942,6 +2087,66 @@
         },
         "summary": "Upload Notebook Page",
         "tags": ["uploads"]
+      }
+    },
+    "/api/sessions/{session_id}/pages/{page_id}/confirm": {
+      "post": {
+        "operationId": "confirm_notebook_page_api_sessions__session_id__pages__page_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "page_id",
+            "required": true,
+            "schema": {
+              "title": "Page Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovedNotebookPage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Notebook Page",
+        "tags": ["learning"]
       }
     },
     "/api/sessions/{session_id}/processing-jobs": {

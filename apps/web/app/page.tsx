@@ -2,6 +2,12 @@
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  ConceptGraph,
+  type ConceptGraphData,
+  type GraphStatus,
+} from "./concept-graph";
+
 type Marker = "star" | "question";
 type HighlightColor = "yellow" | "blue" | "pink" | "red";
 export type Region = {
@@ -39,13 +45,23 @@ type ApiNotebookAnalysis = {
   page_summary: string;
   typed_text: string;
   regions: ApiNotebookRegion[];
+  relationships: ApiNotebookRelationship[];
   warnings: string[];
+};
+
+type ApiNotebookRelationship = {
+  id: string;
+  source_region_id: string;
+  target_region_id: string;
+  label: string | null;
+  confidence: number;
 };
 
 type PageAnalysis = {
   pageSummary: string;
   typedText: string;
   regions: Region[];
+  relationships: ApiNotebookRelationship[];
   warnings: string[];
 };
 
@@ -71,7 +87,7 @@ type ConceptDetailsResult = {
   details?: ConceptDetails;
 };
 
-type Screen = "setup" | "processing" | "editor" | "trace" | "cards";
+type Screen = "setup" | "processing" | "editor" | "trace" | "graph" | "cards";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -239,7 +255,7 @@ const stages = [
   "Reading handwriting with OCR",
   "Extracting clean typed text",
   "Finding key topics to highlight",
-  "Building your interactive PDF",
+  "Building your interactive notes",
 ];
 
 function UploadField({
@@ -376,7 +392,7 @@ function NotebookPreview({
   return (
     <div
       className="notebook-surface"
-      aria-label="Notebook page with detected interactive-PDF highlights"
+      aria-label="Notebook page with detected interactive highlights"
     >
       {imageUrl ? (
         <img
@@ -722,6 +738,7 @@ async function analyzeNotebook(file: File): Promise<PageAnalysis> {
     pageSummary: analysis.page_summary,
     typedText: analysis.typed_text,
     regions: analysis.regions.map(normalizeRegion),
+    relationships: analysis.relationships ?? [],
     warnings: analysis.warnings ?? [],
   };
 }
@@ -793,13 +810,13 @@ function WhatIsTraceback() {
         <p className="eyebrow">What is Traceback?</p>
         <h2 id="what-is-traceback-title">
           <span>A notebook photo becomes</span>
-          <em>an interactive PDF you can learn from.</em>
+          <em>interactive notes you can learn from.</em>
           <span>No more pages trapped in a folder.</span>
         </h2>
         <p className="what-is-note">
           Traceback extracts the text from your notes, preserves it in a clean
-          PDF, and adds hoverable ideas that open helpful context and relevant
-          links.
+          study view, and adds hoverable ideas that open helpful context and
+          relevant links.
         </p>
       </div>
     </section>
@@ -877,7 +894,7 @@ function HowItWorks() {
           <h3>Traceback reads the page</h3>
           <p>
             OCR extracts the handwriting and turns your page into a clean,
-            searchable interactive PDF.
+            searchable study view.
           </p>
         </article>
         <article className="process-card trace-card">
@@ -887,7 +904,7 @@ function HowItWorks() {
             aria-hidden="true"
           >
             <div className="mockup-pdf">
-              <small>INTERACTIVE PDF</small>
+              <small>INTERACTIVE NOTES</small>
               <i />
               <i />
               <b>Mitochondria</b>
@@ -940,6 +957,9 @@ export default function Page() {
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [flashcardError, setFlashcardError] = useState<string>();
   const [isFlashcardDrawerOpen, setIsFlashcardDrawerOpen] = useState(false);
+  const [sessionId, setSessionId] = useState<string>();
+  const [graph, setGraph] = useState<ConceptGraphData | null>(null);
+  const [graphStatus, setGraphStatus] = useState<GraphStatus>("idle");
   const manualHighlightCounter = useRef(0);
   const selected = useMemo(
     () => regions.find((region) => region.id === selectedId) ?? regions[0],
@@ -1112,6 +1132,112 @@ export default function Page() {
     setAnnotationHint(
       "Select a short phrase on the page to add a highlighter.",
     );
+  }
+  async function ensureSession() {
+    if (sessionId) return sessionId;
+    const response = await fetch(`${apiBaseUrl}/api/sessions`, {
+      method: "POST",
+    });
+    if (!response.ok)
+      throw new Error("Traceback could not start this scan session.");
+    const payload = (await response.json()) as { id: string };
+    setSessionId(payload.id);
+    return payload.id;
+  }
+  async function approveActivePage() {
+    const analysis = pageAnalyses[activePageIndex];
+    if (!analysis)
+      throw new Error("Scan a notebook page before opening its graph.");
+    const id = await ensureSession();
+    const pageId = `page-${activePageIndex + 1}`;
+    const regionIds = new Set(regions.map((region) => region.id));
+    const response = await fetch(
+      `${apiBaseUrl}/api/sessions/${id}/pages/${pageId}/confirm`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page_id: pageId,
+          page_summary: analysis.pageSummary,
+          typed_text: analysis.typedText,
+          regions: regions
+            .filter(
+              (region) => region.label.trim() && region.transcription?.trim(),
+            )
+            .map((region) => ({
+              id: region.id,
+              label: region.label.trim(),
+              transcription: region.transcription,
+              type: region.type,
+              bbox: {
+                x: region.x / 100,
+                y: region.y / 100,
+                width: Math.max(region.width / 100, 0.0001),
+                height: Math.max(region.height / 100, 0.0001),
+              },
+              markers: region.marker ? [region.marker] : [],
+              confidence: region.confidence / 100,
+            })),
+          relationships: analysis.relationships.filter(
+            (relationship) =>
+              regionIds.has(relationship.source_region_id) &&
+              regionIds.has(relationship.target_region_id),
+          ),
+        }),
+      },
+    );
+    if (!response.ok)
+      throw new Error("Traceback could not approve this scanned page.");
+    const payload = (await response.json()) as {
+      graph_status: "ready" | "pending";
+    };
+    setPageAnalyses((current) =>
+      current.map((page, index) =>
+        index === activePageIndex ? { ...page, regions } : page,
+      ),
+    );
+    return { sessionId: id, status: payload.graph_status };
+  }
+  async function loadGraph(id: string) {
+    const response = await fetch(`${apiBaseUrl}/api/sessions/${id}/graph`);
+    if (!response.ok)
+      throw new Error("Traceback could not load the concept graph.");
+    const payload = (await response.json()) as ConceptGraphData;
+    setGraph(payload);
+    setGraphStatus("ready");
+  }
+  async function openConceptGraph() {
+    setGraphStatus("loading");
+    try {
+      const approvedPage = await approveActivePage();
+      setScreen("graph");
+      if (approvedPage.status === "pending") setGraphStatus("pending");
+      await loadGraph(approvedPage.sessionId);
+    } catch {
+      setScreen("graph");
+      setGraphStatus("error");
+    }
+  }
+  async function retryGraph() {
+    if (!sessionId) return;
+    setGraphStatus("loading");
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/sessions/${sessionId}/graph/refresh`,
+        { method: "POST" },
+      );
+      if (!response.ok) throw new Error("Graph refresh failed");
+      setGraph((await response.json()) as ConceptGraphData);
+      setGraphStatus("ready");
+    } catch {
+      setGraphStatus("error");
+    }
+  }
+  function openGraphSource(pageId: string, regionId: string) {
+    const index = Number(pageId.replace(/^page-/, "")) - 1;
+    if (Number.isInteger(index) && pageAnalyses[index]) showPage(index);
+    setSelectedId(regionId);
+    setScreen("trace");
   }
   function navigateTo(sectionId: "what-it-is" | "how-it-works") {
     setScreen("setup");
@@ -1317,7 +1443,7 @@ export default function Page() {
               <img
                 className="landing-notebook-image"
                 src="/landing-notebook.png"
-                alt="Open ruled notebook showing the Traceback interactive-PDF message"
+                alt="Open ruled notebook showing the Traceback interactive-notes message"
               />
             </div>
             <div id="upload-map" className="setup-card">
@@ -1325,7 +1451,7 @@ export default function Page() {
               <div className="setup-heading">
                 <div>
                   <p className="eyebrow">Create your study reference</p>
-                  <h2>Upload notebook pages</h2>
+                  <h2>Scan notebook pages</h2>
                 </div>
               </div>
               <p className="setup-subcopy">
@@ -1361,13 +1487,13 @@ export default function Page() {
                 disabled={!notebooks.length}
                 onClick={beginAnalysis}
               >
-                Create my PDF <span>→</span>
+                Scan my pages <span>→</span>
               </button>
               <button className="card-demo-button" onClick={beginAnalysis}>
                 View a finished example <span>↗</span>
               </button>
               <p className="privacy-note">
-                Your photos are used only to create this interactive PDF.
+                Your photos are used only to create your interactive study view.
               </p>
             </div>
           </section>
@@ -1381,7 +1507,7 @@ export default function Page() {
           <div className="processing-notebook">
             <OpeningNotebook />
           </div>
-          <p className="eyebrow">Creating your interactive PDF</p>
+          <p className="eyebrow">Creating your interactive notes</p>
           <h1>
             Turning your notes into
             <br />
@@ -1407,8 +1533,8 @@ export default function Page() {
               <p className="eyebrow">Step 2 of 3 · Review highlights</p>
               <h1>Review and refine your highlights.</h1>
               <p>
-                Review the exact phrases readers can hover in your interactive
-                PDF. Every phrase must appear in the extracted text.
+                Review the exact phrases you can explore in your interactive
+                notes. Every phrase must appear in the extracted text.
               </p>
             </div>
             <button
@@ -1416,7 +1542,7 @@ export default function Page() {
               disabled={!allHighlightsAreValid}
               onClick={() => setScreen("trace")}
             >
-              Save &amp; open PDF <span>→</span>
+              Save &amp; open notes <span>→</span>
             </button>
           </header>
           <div className="editor-grid">
@@ -1644,7 +1770,7 @@ export default function Page() {
               ) : (
                 <div className="empty-highlight-editor">
                   <p className="eyebrow">No verified highlights</p>
-                  <h2>Your typed PDF is still ready.</h2>
+                  <h2>Your typed notes are still ready.</h2>
                   <p>
                     Terra did not return any safe key phrases for this page. You
                     can retry analysis or add a phrase that appears in the
@@ -1664,7 +1790,7 @@ export default function Page() {
         <section className="trace-view interactive-pdf-view">
           <header className="trace-header">
             <div>
-              <p className="eyebrow">Your interactive PDF</p>
+              <p className="eyebrow">Your interactive notes</p>
               <h1>
                 Your notes, ready
                 <br />
@@ -1676,6 +1802,15 @@ export default function Page() {
               </p>
             </div>
             <div className="trace-actions">
+              <button
+                className="secondary-button"
+                disabled={!activeAnalysis || graphStatus === "loading"}
+                onClick={() => void openConceptGraph()}
+              >
+                {graphStatus === "loading"
+                  ? "Updating graph…"
+                  : "Concept graph"}
+              </button>
               <button
                 className={
                   isAnnotating ? "secondary-button active" : "secondary-button"
@@ -1724,10 +1859,10 @@ export default function Page() {
           <div className="interactive-pdf-layout">
             <section
               className="interactive-pdf-page"
-              aria-label="Interactive PDF created from your notebook"
+              aria-label="Interactive study notes created from your notebook"
             >
               <header>
-                <span>TRACEBACK PDF</span>
+                <span>TRACEBACK NOTES</span>
                 <span>
                   Page {activePageIndex + 1} of{" "}
                   {Math.max(pageAnalyses.length, 1)}
@@ -1938,6 +2073,25 @@ export default function Page() {
         </section>
       )}
 
+      {screen === "graph" && (
+        <section className="graph-view">
+          <button
+            type="button"
+            className="secondary-button graph-back-button"
+            onClick={() => setScreen("trace")}
+          >
+            ← Back to scanned notes
+          </button>
+          <ConceptGraph
+            graph={graph}
+            status={graphStatus}
+            onRetry={() => void retryGraph()}
+            onOpenSource={openGraphSource}
+            onCreateFlashcards={() => void generateFlashcards()}
+          />
+        </section>
+      )}
+
       {isFlashcardDrawerOpen ? (
         <div
           className="flashcard-modal"
@@ -2053,7 +2207,7 @@ export default function Page() {
               className="secondary-button"
               onClick={() => setScreen("trace")}
             >
-              ← Back to interactive PDF
+              ← Back to interactive notes
             </button>
           </header>
           <div className="cards-grid">
@@ -2087,16 +2241,16 @@ export default function Page() {
                   </p>
                   <div className="card-answer">
                     Open the explanation and links attached to this highlighted
-                    phrase in your interactive PDF.
+                    phrase in your interactive notes.
                   </div>
                   <footer>
-                    Interactive PDF annotation · Edit before saving
+                    Interactive note annotation · Edit before saving
                   </footer>
                 </article>
               ))}
             {regions.filter((region) => region.marker).length === 0 ? (
               <p className="empty-cards">
-                Select a highlighted phrase in the PDF to save it for later.
+                Select a highlighted phrase in your notes to save it for later.
               </p>
             ) : null}
           </div>

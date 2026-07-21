@@ -2651,7 +2651,9 @@ textarea:focus-visible {
 .concept-graph-empty h2 {
   margin: 0;
   color: #3f3b36;
-  font: italic 32px/1 Georgia, serif;
+  font:
+    italic 32px/1 Georgia,
+    serif;
 }
 .concept-graph-heading > p {
   margin: 0;
@@ -2775,6 +2777,16 @@ textarea:focus-visible {
   display: grid;
   gap: 9px;
   margin-top: 22px;
+}
+
+.graph-view {
+  min-height: calc(100vh - 74px);
+  padding: 28px clamp(20px, 4vw, 64px) 56px;
+  background: var(--paper, #f6f0e4);
+}
+
+.graph-back-button {
+  margin-bottom: 20px;
 }
 .concept-graph-actions .primary-button,
 .concept-graph-actions .secondary-button {

@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Page, {
   getNotebookContentLayout,
@@ -22,7 +22,9 @@ const interactiveRegion: Region = {
 };
 
 describe("home page", () => {
-  it("starts an interactive PDF study session", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("starts a scan-only study session", () => {
     render(<Page />);
 
     expect(
@@ -32,6 +34,105 @@ describe("home page", () => {
     expect(
       screen.getByRole("button", { name: /run demo/i }),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/upload.*pdf/i)).not.toBeInTheDocument();
+  });
+
+  it("approves a scanned page and opens its concept graph", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/notebook-analysis"))
+        return new Response(
+          JSON.stringify({
+            page_summary: "Energy in cells",
+            typed_text: "Mitochondria produce ATP.",
+            regions: [
+              {
+                ...interactiveRegion,
+                highlight_text: "Mitochondria",
+                transcription: "Mitochondria produce ATP.",
+                bbox: { x: 0.1, y: 0.1, width: 0.2, height: 0.1 },
+                markers: [],
+                confidence: 0.9,
+                explanation: "Cell organelle",
+                trusted_source_queries: [],
+              },
+            ],
+            relationships: [],
+            warnings: [],
+          }),
+        );
+      if (url.endsWith("/api/concept-details"))
+        return new Response(
+          JSON.stringify({ definition: "Cell organelle", sources: [] }),
+        );
+      if (url.endsWith("/api/sessions") && init?.method === "POST")
+        return new Response(
+          JSON.stringify({
+            id: "00000000-0000-0000-0000-000000000001",
+            status: "created",
+            created_at: "2026-07-21T00:00:00Z",
+            updated_at: "2026-07-21T00:00:00Z",
+          }),
+          { status: 201 },
+        );
+      if (url.endsWith("/pages/page-1/confirm"))
+        return new Response(
+          JSON.stringify({
+            page: { page_id: "page-1" },
+            graph_status: "ready",
+          }),
+        );
+      if (url.endsWith("/graph"))
+        return new Response(
+          JSON.stringify({
+            nodes: [
+              {
+                id: "mitochondria",
+                label: "Mitochondria",
+                type: "concept",
+                confidence: 0.9,
+                sources: [
+                  {
+                    page_id: "page-1",
+                    region_id: "mitochondria",
+                    excerpt: "Mitochondria produce ATP.",
+                    bbox: { x: 0.1, y: 0.1, width: 0.2, height: 0.1 },
+                  },
+                ],
+              },
+            ],
+            edges: [],
+          }),
+        );
+      return new Response(null, { status: 404 });
+    });
+
+    const { container } = render(<Page />);
+    const input = container.querySelector('input[type="file"]');
+    expect(input).not.toBeNull();
+    fireEvent.change(input!, {
+      target: {
+        files: [new File(["scan"], "notes.png", { type: "image/png" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /scan my pages/i }));
+
+    await screen.findByRole("heading", { name: "Energy in cells" });
+    fireEvent.click(screen.getByRole("button", { name: /concept graph/i }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Your concept graph" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([url]) =>
+          String(url).includes(
+            "/api/sessions/00000000-0000-0000-0000-000000000001/pages/page-1/confirm",
+          ),
+        ),
+      ).toBe(true),
+    );
   });
 
   it("highlights only the verified short phrase, not its OCR sentence", () => {
