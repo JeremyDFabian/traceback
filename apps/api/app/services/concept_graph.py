@@ -288,7 +288,7 @@ def generate_cross_page_edges(
 
 
 def _approved_payload(pages: ApprovedNotebookPages) -> str:
-    page_payloads = []
+    page_payloads: list[dict[str, object]] = []
     for page in pages.pages:
         page_payloads.append(
             {
