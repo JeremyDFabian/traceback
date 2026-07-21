@@ -74,31 +74,71 @@ export function getRelevantSources(label: string, queries: string[] = []) {
   const query = encodeURIComponent(queryText);
   const topic = `${label} ${queryText}`.toLocaleLowerCase();
 
-  if (/(bacteria|virus|microbe|infection|disease|medical|health|syphilis)/.test(topic)) {
+  if (
+    /(bacteria|virus|microbe|infection|disease|medical|health|syphilis)/.test(
+      topic,
+    )
+  ) {
     return [
-      { title: `CDC resources on ${label}`, url: `https://search.cdc.gov/search/?query=${query}` },
-      { title: `PubMed research on ${label}`, url: `https://pubmed.ncbi.nlm.nih.gov/?term=${query}` },
-      { title: `NCBI Bookshelf on ${label}`, url: `https://www.ncbi.nlm.nih.gov/books/?term=${query}` },
+      {
+        title: `CDC resources on ${label}`,
+        url: `https://search.cdc.gov/search/?query=${query}`,
+      },
+      {
+        title: `PubMed research on ${label}`,
+        url: `https://pubmed.ncbi.nlm.nih.gov/?term=${query}`,
+      },
+      {
+        title: `NCBI Bookshelf on ${label}`,
+        url: `https://www.ncbi.nlm.nih.gov/books/?term=${query}`,
+      },
     ];
   }
   if (/(history|historical|jenner|semme|holmes|ehrlich)/.test(topic)) {
     return [
-      { title: `Britannica on ${label}`, url: `https://www.britannica.com/search?query=${query}` },
-      { title: `NIH history resources on ${label}`, url: `https://www.nih.gov/search?query=${query}` },
-      { title: `National Library of Medicine on ${label}`, url: `https://www.nlm.nih.gov/search/?query=${query}` },
+      {
+        title: `Britannica on ${label}`,
+        url: `https://www.britannica.com/search?query=${query}`,
+      },
+      {
+        title: `NIH history resources on ${label}`,
+        url: `https://www.nih.gov/search?query=${query}`,
+      },
+      {
+        title: `National Library of Medicine on ${label}`,
+        url: `https://www.nlm.nih.gov/search/?query=${query}`,
+      },
     ];
   }
   if (/(cell|atp|mitochond|biology|genetic|pcr|dna|rna)/.test(topic)) {
     return [
-      { title: `OpenStax on ${label}`, url: `https://openstax.org/search?query=${query}` },
-      { title: `Nature Education on ${label}`, url: `https://www.nature.com/search?q=${query}` },
-      { title: `Khan Academy on ${label}`, url: `https://www.khanacademy.org/search?page_search_query=${query}` },
+      {
+        title: `OpenStax on ${label}`,
+        url: `https://openstax.org/search?query=${query}`,
+      },
+      {
+        title: `Nature Education on ${label}`,
+        url: `https://www.nature.com/search?q=${query}`,
+      },
+      {
+        title: `Khan Academy on ${label}`,
+        url: `https://www.khanacademy.org/search?page_search_query=${query}`,
+      },
     ];
   }
   return [
-    { title: `Google Scholar research on ${label}`, url: `https://scholar.google.com/scholar?q=${query}` },
-    { title: `Britannica on ${label}`, url: `https://www.britannica.com/search?query=${query}` },
-    { title: `Wikipedia on ${label}`, url: `https://en.wikipedia.org/w/index.php?search=${query}` },
+    {
+      title: `Google Scholar research on ${label}`,
+      url: `https://scholar.google.com/scholar?q=${query}`,
+    },
+    {
+      title: `Britannica on ${label}`,
+      url: `https://www.britannica.com/search?query=${query}`,
+    },
+    {
+      title: `Wikipedia on ${label}`,
+      url: `https://en.wikipedia.org/w/index.php?search=${query}`,
+    },
   ];
 }
 const demoTypedText =
@@ -432,7 +472,9 @@ function getReadableNotebookLines(text: string): string[] {
     .flatMap(splitLongNotebookLine);
 }
 
-export function getNotebookContentLayout(text: string): NotebookContentLayout | undefined {
+export function getNotebookContentLayout(
+  text: string,
+): NotebookContentLayout | undefined {
   const explicitHeading = getNotebookHeading(text);
   const lines = getReadableNotebookLines(text);
   if (lines.length < 2) return undefined;
@@ -444,7 +486,8 @@ export function getNotebookContentLayout(text: string): NotebookContentLayout | 
     !itemPattern.test(lines[0]) &&
     !nameAndContribution.test(lines[0]) &&
     !/[.!?]$/.test(lines[0]);
-  const heading = explicitHeading ?? (firstLineIsHeading ? lines.shift() : undefined);
+  const heading =
+    explicitHeading ?? (firstLineIsHeading ? lines.shift() : undefined);
   const items: StructuredNotebookItem[] = [];
 
   for (const line of lines) {
@@ -576,7 +619,10 @@ export function InteractiveNotebookText({
   }
 
   return (
-    <section className="structured-notebook-text" aria-label="Extracted notebook notes">
+    <section
+      className="structured-notebook-text"
+      aria-label="Extracted notebook notes"
+    >
       {showHeading && layout.heading ? <h3>{layout.heading}</h3> : null}
       <ul>
         {layout.items.map((item, index) => (
@@ -916,7 +962,7 @@ export default function Page() {
     );
   const visibleSources = selected
     ? getRelevantSources(selected.label, selected.trustedSourceQueries)
-    : conceptDetails?.sources ?? [];
+    : (conceptDetails?.sources ?? []);
 
   useEffect(
     () => () => {

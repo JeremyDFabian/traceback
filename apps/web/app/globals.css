@@ -4228,7 +4228,11 @@ textarea:focus-visible {
 }
 .pdf-page-content h2.structured-note-page-title {
   margin-bottom: 18px;
-  font: 800 25px/1.25 Inter, ui-sans-serif, system-ui, sans-serif;
+  font:
+    800 25px/1.25 Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
   letter-spacing: -0.5px;
 }
 .notebook-plain-text {

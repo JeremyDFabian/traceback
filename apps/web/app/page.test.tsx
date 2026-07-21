@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import Page, { getNotebookContentLayout, getRelevantSources, InteractiveNotebookText, type Region } from "./page";
+import Page, {
+  getNotebookContentLayout,
+  getRelevantSources,
+  InteractiveNotebookText,
+  type Region,
+} from "./page";
 
 const interactiveRegion: Region = {
   id: "mitochondria",
@@ -67,18 +72,29 @@ describe("home page", () => {
 Person ? Contribution
 Supporting detail for revision."
         regions={[
-          { ...interactiveRegion, id: "support", label: "Supporting detail", highlightText: "Supporting detail for revision." },
+          {
+            ...interactiveRegion,
+            id: "support",
+            label: "Supporting detail",
+            highlightText: "Supporting detail for revision.",
+          },
         ]}
         selectedId=""
         onSelect={() => undefined}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Supporting detail for revision." })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Supporting detail for revision." }),
+    ).toBeInTheDocument();
   });
 
   it("chooses medical reference sites for microbiology concepts", () => {
-    expect(getRelevantSources("Microbes are ubiquitous").map((source) => source.title)).toEqual([
+    expect(
+      getRelevantSources("Microbes are ubiquitous").map(
+        (source) => source.title,
+      ),
+    ).toEqual([
       "CDC resources on Microbes are ubiquitous",
       "PubMed research on Microbes are ubiquitous",
       "NCBI Bookshelf on Microbes are ubiquitous",
@@ -90,8 +106,18 @@ Supporting detail for revision."
       <InteractiveNotebookText
         text="DNA/RNA methods support PCR-based identification."
         regions={[
-          { ...interactiveRegion, id: "dna-rna", label: "DNA/RNA", highlightText: "DNA/RNA" },
-          { ...interactiveRegion, id: "pcr", label: "PCR-based", highlightText: "PCR-based" },
+          {
+            ...interactiveRegion,
+            id: "dna-rna",
+            label: "DNA/RNA",
+            highlightText: "DNA/RNA",
+          },
+          {
+            ...interactiveRegion,
+            id: "pcr",
+            label: "PCR-based",
+            highlightText: "PCR-based",
+          },
         ]}
         selectedId=""
         onSelect={() => undefined}
@@ -99,7 +125,9 @@ Supporting detail for revision."
     );
 
     expect(screen.getByRole("button", { name: "DNA/RNA" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "PCR-based" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "PCR-based" }),
+    ).toBeInTheDocument();
   });
 
   it("turns named note contributions into a compact structured list", () => {
@@ -130,16 +158,25 @@ Supporting detail for revision."
         text={text}
         regions={[
           { ...interactiveRegion, highlightText: "Birth at home" },
-          { ...interactiveRegion, id: "pcr", label: "PCR", highlightText: "PCR" },
+          {
+            ...interactiveRegion,
+            id: "pcr",
+            label: "PCR",
+            highlightText: "PCR",
+          },
         ]}
         selectedId=""
         onSelect={() => undefined}
       />,
     );
 
-    expect(screen.getByRole("heading", { name: text.split("\n")[0] })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: text.split("\n")[0] }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Pr. Holmes").tagName).toBe("STRONG");
-    expect(screen.getByRole("button", { name: "Birth at home" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Birth at home" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "PCR" })).toBeInTheDocument();
   });
 
