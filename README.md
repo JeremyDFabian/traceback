@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="apps/web/public/landing-notebook-with-copy.png" alt="Traceback turns handwritten notes into interactive study notes" width="720" />
+  <img src="apps/web/public/readme-landing-preview.png" alt="Traceback landing page with notebook scanning and interactive study notes" width="1000" />
 </p>
 
 ## The problem
