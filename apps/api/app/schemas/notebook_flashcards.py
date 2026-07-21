@@ -8,9 +8,15 @@ class NotebookHighlightInput(BaseModel):
     phrase: str = Field(min_length=1, max_length=200)
 
 
+def _default_highlights() -> list[NotebookHighlightInput]:
+    return []
+
+
 class NotebookFlashcardRequest(BaseModel):
     typed_text: str = Field(min_length=1, max_length=20_000)
-    highlights: list[NotebookHighlightInput] = Field(default_factory=list, max_length=30)
+    highlights: list[NotebookHighlightInput] = Field(
+        default_factory=_default_highlights, max_length=30
+    )
     count: int = Field(default=5, ge=3, le=10)
 
 
