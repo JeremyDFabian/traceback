@@ -65,6 +65,12 @@ type NotebookFlashcard = {
 
 type SourceStatus = "idle" | "loading" | "ready" | "unavailable";
 
+type ConceptDetailsResult = {
+  highlightId: string;
+  status: Exclude<SourceStatus, "idle" | "loading">;
+  details?: ConceptDetails;
+};
+
 type Screen = "setup" | "processing" | "editor" | "trace" | "cards";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -916,8 +922,8 @@ export default function Page() {
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [isLiveAnalysis, setIsLiveAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string>();
-  const [conceptDetails, setConceptDetails] = useState<ConceptDetails>();
-  const [sourceStatus, setSourceStatus] = useState<SourceStatus>("idle");
+  const [conceptDetailsResult, setConceptDetailsResult] =
+    useState<ConceptDetailsResult>();
   const [isRepositioning, setIsRepositioning] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isAnnotating, setIsAnnotating] = useState(false);
@@ -934,6 +940,7 @@ export default function Page() {
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [flashcardError, setFlashcardError] = useState<string>();
   const [isFlashcardDrawerOpen, setIsFlashcardDrawerOpen] = useState(false);
+  const manualHighlightCounter = useRef(0);
   const selected = useMemo(
     () => regions.find((region) => region.id === selectedId) ?? regions[0],
     [regions, selectedId],
@@ -960,6 +967,16 @@ export default function Page() {
     regions.every((region) =>
       isValidHighlightPhrase(region.highlightText, renderedTypedText),
     );
+  const conceptDetails =
+    conceptDetailsResult?.highlightId === selected?.id
+      ? conceptDetailsResult.details
+      : undefined;
+  const sourceStatus: SourceStatus =
+    screen !== "trace" || !selected
+      ? "idle"
+      : conceptDetailsResult?.highlightId === selected.id
+        ? conceptDetailsResult.status
+        : "loading";
   const visibleSources = selected
     ? getRelevantSources(selected.label, selected.trustedSourceQueries)
     : (conceptDetails?.sources ?? []);
@@ -987,15 +1004,10 @@ export default function Page() {
     return () => window.clearInterval(timer);
   }, [isLiveAnalysis, screen]);
   useEffect(() => {
-    if (screen !== "trace" || !selected) {
-      setConceptDetails(undefined);
-      setSourceStatus("idle");
-      return;
-    }
+    if (screen !== "trace" || !selected) return;
 
+    const highlightId = selected.id;
     const controller = new AbortController();
-    setConceptDetails(undefined);
-    setSourceStatus("loading");
     void fetch(`${apiBaseUrl}/api/concept-details`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1013,13 +1025,11 @@ export default function Page() {
       })
       .then((details) => {
         if (controller.signal.aborted) return;
-        setConceptDetails(details);
-        setSourceStatus("ready");
+        setConceptDetailsResult({ highlightId, status: "ready", details });
       })
       .catch((error: unknown) => {
         if ((error as Error).name !== "AbortError") {
-          setConceptDetails(undefined);
-          setSourceStatus("unavailable");
+          setConceptDetailsResult({ highlightId, status: "unavailable" });
         }
       });
 
@@ -1192,7 +1202,7 @@ export default function Page() {
       );
       setSelectedId(existing.id);
     } else {
-      const id = `manual-${Date.now()}`;
+      const id = `manual-${++manualHighlightCounter.current}`;
       setRegions((current) => [
         ...current,
         {
