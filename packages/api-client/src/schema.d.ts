@@ -72,6 +72,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/notebook-flashcards/generate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Generate Cards */
+    post: operations["generate_cards_api_notebook_flashcards_generate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/sessions": {
     parameters: {
       query?: never;
@@ -602,6 +619,46 @@ export interface components {
       /** Warnings */
       warnings?: string[];
     };
+    /** NotebookFlashcard */
+    NotebookFlashcard: {
+      /** Answer */
+      answer: string;
+      /**
+       * Difficulty
+       * @enum {string}
+       */
+      difficulty: "easy" | "medium" | "hard";
+      /** Id */
+      id: string;
+      /** Question */
+      question: string;
+      /** Source Phrase */
+      source_phrase?: string | null;
+    };
+    /** NotebookFlashcardRequest */
+    NotebookFlashcardRequest: {
+      /**
+       * Count
+       * @default 5
+       */
+      count?: number;
+      /** Highlights */
+      highlights?: components["schemas"]["NotebookHighlightInput"][];
+      /** Typed Text */
+      typed_text: string;
+    };
+    /** NotebookFlashcardResponse */
+    NotebookFlashcardResponse: {
+      /** Flashcards */
+      flashcards: components["schemas"]["NotebookFlashcard"][];
+    };
+    /** NotebookHighlightInput */
+    NotebookHighlightInput: {
+      /** Id */
+      id: string;
+      /** Phrase */
+      phrase: string;
+    };
     /** NotebookMarker */
     NotebookMarker: {
       bbox?: components["schemas"]["BoundingBox"] | null;
@@ -629,6 +686,11 @@ export interface components {
        * @default
        */
       explanation?: string;
+      /**
+       * Highlight Text
+       * @default
+       */
+      highlight_text?: string;
       /** Id */
       id: string;
       /** Label */
@@ -882,6 +944,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["NotebookAnalysisResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  generate_cards_api_notebook_flashcards_generate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NotebookFlashcardRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotebookFlashcardResponse"];
         };
       };
       /** @description Validation Error */
