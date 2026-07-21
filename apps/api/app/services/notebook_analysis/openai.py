@@ -85,7 +85,8 @@ def analyze_notebook_with_openai(
                             "type": "input_text",
                             "text": (
                                 "Analyze the notebook photograph as primary evidence. OCR/layout "
-                                "regions are optional hints and may be wrong for rotated or faint handwriting. Return the requested structured result.\n\n"
+                                "regions are optional hints and may be wrong for rotated or faint "
+                                "handwriting. Return the requested structured result.\n\n"
                                 f"OCR/layout regions:\n{serialize_ocr_regions(ocr_regions or [])}"
                             ),
                         },

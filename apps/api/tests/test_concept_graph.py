@@ -180,7 +180,7 @@ def test_build_graph_adds_general_source_anchored_learning_structure() -> None:
                 id="theme-1",
                 source="prevention",
                 target="medical advances",
-                label="belongs to",
+                label="contributes to",
                 confidence=0.9,
             ),
         ],
@@ -210,5 +210,5 @@ def test_build_graph_adds_general_source_anchored_learning_structure() -> None:
         "prevention",
         "medical advances",
     }
-    assert {edge.label for edge in graph.edges} == {"helps prevent", "belongs to"}
+    assert {edge.label for edge in graph.edges} == {"helps prevent", "contributes to"}
     assert next(node for node in graph.nodes if node.id == "prevention").type == "category"

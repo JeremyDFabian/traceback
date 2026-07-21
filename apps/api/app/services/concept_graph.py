@@ -21,16 +21,27 @@ Create a compact, useful concept graph from one or more approved notebook pages.
 The graph must teach relationships, not duplicate a bullet list.
 
 Return two layers:
-1. Source-grounded concepts: use the supplied concept IDs and direct relationships stated in the notes.
-2. Learning structure: optionally add a small number of theme, category, or outcome nodes when they make the map easier to study.
+1. Source-grounded concepts: use the supplied concept IDs and direct relationships
+   stated in the notes.
+2. Learning structure: optionally add a few theme, category, or outcome nodes when
+   they make the map easier to study.
 
 Rules:
-- A generated node must be type theme, category, or outcome and include the submitted concept IDs that support it.
-- Do not create a node for every line. Prefer one central theme and a few meaningful branches over a crowded map.
-- A relationship between two submitted concepts is allowed only when the notes explicitly support it. Its relationship label must be concise and grounded in the note wording.
-- A relationship involving a generated learning-structure node must explain a specific learning effect. Use only: "supports", "contributes to", "helps prevent", "helps diagnose", "helps treat", "leads to", "is an example of", "is a type of". Never use generic labels such as "belongs to" or "related".
-- Do not invent people, procedures, diseases, outcomes, or historical claims. If a useful category or outcome cannot be inferred reliably, omit it.
-- Every generated node and relationship needs confidence >= 0.70. Return an empty list when the notes do not support a useful connection.
+- A generated node must be type theme, category, or outcome and include the
+  submitted concept IDs that support it.
+- Do not create a node for every line. Prefer one central theme and a few
+  meaningful branches over a crowded map.
+- A relationship between two submitted concepts is allowed only when the notes
+  explicitly support it. Its label must be concise and grounded in the notes.
+- A relationship involving a generated learning-structure node must explain a
+  specific learning effect. Use only: "supports", "contributes to",
+  "helps prevent", "helps diagnose", "helps treat", "leads to",
+  "is an example of", or "is a type of". Never use generic labels such as
+  "belongs to" or "related".
+- Do not invent people, procedures, diseases, outcomes, or historical claims.
+  If a useful category or outcome cannot be inferred reliably, omit it.
+- Every generated node and relationship needs confidence >= 0.70. Return an
+  empty list when the notes do not support a useful connection.
 - Use only submitted concept IDs plus the IDs of generated nodes in relationships.
 """.strip()
 
