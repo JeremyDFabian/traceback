@@ -4,6 +4,7 @@
 !.env.example
 .next/
 .superpowers/
+.worktrees/
 .pytest_cache/
 .ruff_cache/
 .venv/
