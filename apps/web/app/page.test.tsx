@@ -116,7 +116,9 @@ describe("home page", () => {
         files: [new File(["scan"], "notes.png", { type: "image/png" })],
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /scan my pages/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Scan my pages →" }),
+    );
 
     await screen.findByRole("heading", { name: "Energy in cells" });
     fireEvent.click(screen.getByRole("button", { name: /concept graph/i }));

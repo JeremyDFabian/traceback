@@ -7,6 +7,13 @@ import {
   type ConceptGraphData,
   type GraphStatus,
 } from "./concept-graph";
+import {
+  FlashcardStudyDeck,
+  type SavedStudySet,
+  type StudyCard,
+  type StudySetInput,
+} from "./flashcard-study-deck";
+import { FocusTimer } from "./focus-timer";
 
 type Marker = "star" | "question";
 type HighlightColor = "yellow" | "blue" | "pink" | "red";
@@ -70,12 +77,7 @@ type ConceptDetails = {
   sources: Array<{ title: string; url: string }>;
 };
 
-type NotebookFlashcard = {
-  id: string;
-  question: string;
-  answer: string;
-  difficulty: "easy" | "medium" | "hard";
-  source_phrase?: string;
+type NotebookFlashcard = StudyCard & {
   included: boolean;
 };
 
@@ -257,6 +259,58 @@ const stages = [
   "Finding key topics to highlight",
   "Building your interactive notes",
 ];
+
+const loadingCopy = [
+  {
+    eyebrow: "Reading your notebook",
+    heading: "Finding the ideas",
+    emphasis: "you put on paper.",
+    detail: "Starting with the handwriting, structure, and study cues on the page.",
+  },
+  {
+    eyebrow: "Shaping your notes",
+    heading: "Turning handwriting into",
+    emphasis: "clear study text.",
+    detail: "Keeping the language readable while preserving what matters.",
+  },
+  {
+    eyebrow: "Adding useful context",
+    heading: "Choosing the concepts",
+    emphasis: "worth exploring.",
+    detail: "Only short, meaningful ideas become interactive highlights.",
+  },
+  {
+    eyebrow: "Finishing your study view",
+    heading: "Putting your notes",
+    emphasis: "within reach.",
+    detail: "Your interactive notes are nearly ready to review.",
+  },
+];
+
+function createStarterFlashcards(regions: Region[], typedText: string) {
+  const seen = new Set<string>();
+  return regions
+    .filter((region) => {
+      const phrase = (region.highlightText ?? region.label).trim();
+      const key = phrase.toLocaleLowerCase();
+      if (!phrase || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 8)
+    .map((region, index) => {
+      const phrase = (region.highlightText ?? region.label).trim();
+      return {
+        id: `starter-${region.id}-${index}`,
+        question: `What should you remember about ${phrase}?`,
+        answer:
+          region.explanation ??
+          `${phrase} appears in these notes: ${typedText.slice(0, 180)}${typedText.length > 180 ? "…" : ""}`,
+        difficulty: "medium" as const,
+        source_phrase: phrase,
+      };
+    });
+}
 
 function UploadField({
   label,
@@ -452,6 +506,7 @@ type StructuredNotebookItem = {
   name?: string;
   contribution: string;
   support?: string;
+  style?: "numbered" | "bullet";
 };
 
 type NotebookContentLayout = {
@@ -501,7 +556,7 @@ export function getNotebookContentLayout(
   const lines = getReadableNotebookLines(text);
   if (lines.length < 2) return undefined;
 
-  const itemPattern = /^(?:[-*\u2022]|\d+[.)])\s+(.+)$/;
+  const itemPattern = /^([-*\u2022]|\d+[.)])\s+(.+)$/;
   const nameAndContribution = /^(.{2,72}?)\s+(?:\u2014|\u2013|-|:)\s+(.+)$/;
   const firstLineIsHeading =
     !explicitHeading &&
@@ -514,17 +569,23 @@ export function getNotebookContentLayout(
 
   for (const line of lines) {
     const bulletMatch = line.match(itemPattern);
-    const content = bulletMatch?.[1] ?? line;
+    const content = bulletMatch?.[2] ?? line;
+    const style = bulletMatch?.[1]?.match(/^\d/)
+      ? "numbered"
+      : bulletMatch
+        ? "bullet"
+        : undefined;
     const namedMatch = content.match(nameAndContribution);
     if (namedMatch) {
       items.push({
         name: namedMatch[1].trim(),
         contribution: namedMatch[2].trim(),
+        ...(style ? { style } : {}),
       });
       continue;
     }
     if (bulletMatch) {
-      items.push({ contribution: content });
+      items.push({ contribution: content, style });
       continue;
     }
     if (items.length) {
@@ -532,7 +593,7 @@ export function getNotebookContentLayout(
       lastItem.support = [lastItem.support, content].filter(Boolean).join(" ");
       continue;
     }
-    items.push({ contribution: content });
+    items.push({ contribution: content, ...(style ? { style } : {}) });
   }
 
   return items.length >= 2 ? { heading, items } : undefined;
@@ -640,13 +701,17 @@ export function InteractiveNotebookText({
     );
   }
 
+  const List = layout.items.every((item) => item.style === "numbered")
+    ? "ol"
+    : "ul";
+
   return (
     <section
       className="structured-notebook-text"
       aria-label="Extracted notebook notes"
     >
       {showHeading && layout.heading ? <h3>{layout.heading}</h3> : null}
-      <ul>
+      <List className={List === "ol" ? "numbered-notes" : undefined}>
         {layout.items.map((item, index) => (
           <li key={`${item.name ?? item.contribution}-${index}`}>
             <div>
@@ -671,7 +736,7 @@ export function InteractiveNotebookText({
             ) : null}
           </li>
         ))}
-      </ul>
+      </List>
     </section>
   );
 }
@@ -688,6 +753,22 @@ function fileToBase64(file: File) {
         return;
       }
       resolve(result.split(",")[1] ?? result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () =>
+      reject(new Error("Unable to prepare this notebook photo."));
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Unable to prepare this notebook photo."));
+        return;
+      }
+      resolve(reader.result);
     };
     reader.readAsDataURL(file);
   });
@@ -865,12 +946,13 @@ function HowItWorks() {
               </div>
               <div className="camera-corners" />
             </div>
-            <p>PHOTO READY</p>
+            <div className="page-count-chip">+ 3 PAGES</div>
+            <p>SCANS SAVED</p>
           </div>
-          <h3>upload one clear photo</h3>
+          <h3>scan your study pages</h3>
           <p>
-            Start with a smartphone photo of a handwritten study page—bullets,
-            sketches, and arrows included.
+            Add one or more clear notebook photos. Keep the originals beside the
+            cleaned notes whenever you need to cross-check them.
           </p>
         </article>
         <article className="process-card confirm-card">
@@ -880,27 +962,27 @@ function HowItWorks() {
             aria-hidden="true"
           >
             <div className="mockup-paper">
-              <small>EXTRACTING TEXT</small>
+              <small>CLEAN STUDY NOTES</small>
               <b>Cellular respiration</b>
               <i />
               <i />
               <i />
-              <em>mitochondria → ATP</em>
+              <em>• Mitochondria produce ATP</em>
             </div>
             <div className="ocr-chip">
-              OCR <strong>✓</strong>
+              OCR + AI <strong>✓</strong>
             </div>
           </div>
-          <h3>Traceback reads the page</h3>
+          <h3>get notes built for study</h3>
           <p>
-            OCR extracts the handwriting and turns your page into a clean,
-            searchable study view.
+            OCR and GPT-5.6 clean up the layout, preserve the important ideas,
+            and add only safe, short highlights.
           </p>
         </article>
         <article className="process-card trace-card">
           <span>Step 03</span>
           <div
-            className="process-visual workflow-mockup hover-mockup"
+            className="process-visual workflow-mockup study-mockup"
             aria-hidden="true"
           >
             <div className="mockup-pdf">
@@ -910,16 +992,16 @@ function HowItWorks() {
               <b>Mitochondria</b>
               <i />
             </div>
-            <div className="mockup-context">
-              <small>ABOUT THIS TOPIC</small>
-              <b>Mitochondria</b>
-              <p>Explanation + 3 sources</p>
+            <div className="mockup-study-card">
+              <small>STUDY DECK</small>
+              <b>25:00</b>
+              <p>Flashcards · share set</p>
             </div>
           </div>
-          <h3>hover to learn more</h3>
+          <h3>study it your way</h3>
           <p>
-            Hover over a highlighted idea for clear context, related
-            explanations, and useful websites to explore.
+            Select a highlighted phrase for context and trusted links, then turn
+            the same notes into flashcards, a focus session, or a shareable deck.
           </p>
         </article>
       </div>
@@ -931,6 +1013,8 @@ export default function Page() {
   const [screen, setScreen] = useState<Screen>("setup");
   const [notebooks, setNotebooks] = useState<File[]>([]);
   const [imageUrl, setImageUrl] = useState<string>();
+  const [pageImageDataUrls, setPageImageDataUrls] = useState<string[]>([]);
+  const [isUploadedImagesOpen, setIsUploadedImagesOpen] = useState(false);
   const [stage, setStage] = useState(0);
   const [regions, setRegions] = useState(seededRegions);
   const [selectedId, setSelectedId] = useState("mitochondria");
@@ -957,6 +1041,11 @@ export default function Page() {
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [flashcardError, setFlashcardError] = useState<string>();
   const [isFlashcardDrawerOpen, setIsFlashcardDrawerOpen] = useState(false);
+  const [flashcardDrawerMode, setFlashcardDrawerMode] = useState<
+    "library" | "review"
+  >("library");
+  const [studySetIdOverride, setStudySetIdOverride] = useState<string>();
+  const automaticFlashcardsStarted = useRef(false);
   const [sessionId, setSessionId] = useState<string>();
   const [graph, setGraph] = useState<ConceptGraphData | null>(null);
   const [graphStatus, setGraphStatus] = useState<GraphStatus>("idle");
@@ -969,6 +1058,49 @@ export default function Page() {
   const renderedTypedText = activeAnalysis
     ? activeAnalysis.typedText
     : editedDemoText;
+  const currentStudySet = useMemo<StudySetInput>(() => {
+    const analysesToSave = pageAnalyses.length
+      ? pageAnalyses
+      : [
+          {
+            pageSummary: "Interactive notebook notes",
+            typedText: editedDemoText,
+          },
+        ];
+    const pages = analysesToSave.map((analysis, index) => ({
+      id: `page-${index + 1}`,
+      title:
+        getNotebookHeading(analysis.typedText) ??
+        analysis.pageSummary ??
+        `Notebook page ${index + 1}`,
+      typedText: analysis.typedText,
+      imageDataUrl: pageImageDataUrls[index],
+      regions:
+        index === activePageIndex
+          ? regions
+          : "regions" in analysis
+            ? analysis.regions
+            : seededRegions,
+    }));
+    const fingerprint = pages
+      .map((page) => `${page.title}-${page.typedText.length}`)
+      .join("-");
+
+    return {
+      id: studySetIdOverride ?? `notes-${sessionId ?? fingerprint}`,
+      title: pages[0]?.title ?? "Saved notebook notes",
+      pages,
+    };
+  }, [
+    activePageIndex,
+    editedDemoText,
+    pageAnalyses,
+    pageImageDataUrls,
+    regions,
+    sessionId,
+    studySetIdOverride,
+  ]);
+  const activeLoadingCopy = loadingCopy[Math.min(stage, loadingCopy.length - 1)];
   const structuredNotebookLayout = getNotebookContentLayout(renderedTypedText);
   const extractedNotebookHeading = getNotebookHeading(renderedTypedText);
   const useCompactNotebookTitle =
@@ -1003,7 +1135,7 @@ export default function Page() {
 
   useEffect(
     () => () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      if (imageUrl?.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
     },
     [imageUrl],
   );
@@ -1023,6 +1155,17 @@ export default function Page() {
     );
     return () => window.clearInterval(timer);
   }, [isLiveAnalysis, screen]);
+  useEffect(() => {
+    if (
+      screen !== "trace" ||
+      automaticFlashcardsStarted.current ||
+      !renderedTypedText.trim()
+    ) {
+      return;
+    }
+    automaticFlashcardsStarted.current = true;
+    void generateFlashcards();
+  }, [screen, renderedTypedText]);
   useEffect(() => {
     if (screen !== "trace" || !selected) return;
 
@@ -1061,20 +1204,25 @@ export default function Page() {
     if (!files.length) return;
 
     if (!notebooks.length) {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      if (imageUrl?.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
       setImageUrl(URL.createObjectURL(files[0]));
     }
     setNotebooks((current) => [...current, ...files]);
     event.target.value = "";
   }
   function clearNotebooks() {
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
+    if (imageUrl?.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
     setNotebooks([]);
     setImageUrl(undefined);
+    setPageImageDataUrls([]);
   }
   function beginAnalysis() {
     setAnalysisError(undefined);
     setStage(0);
+    setStudySetIdOverride(undefined);
+    setFlashcards([]);
+    setFlashcardError(undefined);
+    automaticFlashcardsStarted.current = false;
 
     if (notebooks.length) {
       void analyzeNotebookPages();
@@ -1095,7 +1243,9 @@ export default function Page() {
 
     try {
       const analyses: PageAnalysis[] = [];
+      const savedImages: string[] = [];
       for (const file of notebooks) {
+        savedImages.push(await fileToDataUrl(file));
         analyses.push(await analyzeNotebook(file));
         setStage((current) => Math.min(stages.length - 1, current + 1));
       }
@@ -1104,6 +1254,8 @@ export default function Page() {
       if (!firstPage)
         throw new Error("Traceback could not read those notebook pages.");
       setPageAnalyses(analyses);
+      setPageImageDataUrls(savedImages);
+      setImageUrl(savedImages[0]);
       setActivePageIndex(0);
       setRegions(firstPage.regions);
       setSelectedId(firstPage.regions[0]?.id ?? "");
@@ -1123,6 +1275,7 @@ export default function Page() {
     const nextPage = pageAnalyses[index];
     if (!nextPage) return;
     setActivePageIndex(index);
+    setImageUrl(pageImageDataUrls[index]);
     setRegions(nextPage.regions);
     setSelectedId(nextPage.regions[0]?.id ?? "");
     setIsEditingNotes(false);
@@ -1133,6 +1286,82 @@ export default function Page() {
       "Select a short phrase on the page to add a highlighter.",
     );
   }
+  function openSavedStudySet(savedStudySet: SavedStudySet, savedCards: StudyCard[]) {
+    const restoredPages = savedStudySet.pages.map((page) => ({
+      pageSummary: page.title,
+      typedText: page.typedText,
+      regions: Array.isArray(page.regions) ? (page.regions as Region[]) : [],
+      relationships: [],
+      warnings: [],
+    }));
+    const firstPage = restoredPages[0];
+    if (!firstPage) return;
+
+    setNotebooks([]);
+    setStudySetIdOverride(savedStudySet.id);
+    setPageAnalyses(restoredPages);
+    setPageImageDataUrls(
+      savedStudySet.pages.map((page) => page.imageDataUrl ?? ""),
+    );
+    setActivePageIndex(0);
+    setImageUrl(savedStudySet.pages[0]?.imageDataUrl);
+    setRegions(firstPage.regions);
+    setSelectedId(firstPage.regions[0]?.id ?? "");
+    setFlashcards(savedCards.map((card) => ({ ...card, included: true })));
+    setIsFlashcardDrawerOpen(false);
+    setScreen("trace");
+  }
+
+  async function shareStudySet(
+    studySet: SavedStudySet,
+    cards: StudyCard[],
+  ) {
+    // Scans stay on the learner's device. A shared deck includes the cleaned
+    // notes, highlights, and recall cards needed to study together.
+    const sharedStudySet = {
+      ...studySet,
+      pages: studySet.pages.map(({ imageDataUrl: _imageDataUrl, ...page }) => page),
+    };
+    const response = await fetch("/api/shared-study-sets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ study_set: sharedStudySet, cards }),
+    });
+    if (!response.ok) {
+      throw new Error("Traceback could not create a share link.");
+    }
+    const payload = (await response.json()) as { id: string };
+    return `${window.location.origin}/?study=${encodeURIComponent(payload.id)}`;
+  }
+
+  useEffect(() => {
+    const shareId = new URLSearchParams(window.location.search).get("study");
+    if (!shareId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/shared-study-sets/${encodeURIComponent(shareId)}`,
+        );
+        if (!response.ok) throw new Error("This shared study set is unavailable.");
+        const payload = (await response.json()) as {
+          study_set: SavedStudySet;
+          cards: StudyCard[];
+        };
+        if (!cancelled) openSavedStudySet(payload.study_set, payload.cards);
+      } catch (error) {
+        if (!cancelled) {
+          setAnalysisError(
+            error instanceof Error ? error.message : "This shared study set is unavailable.",
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function ensureSession() {
     if (sessionId) return sessionId;
     const response = await fetch(`${apiBaseUrl}/api/sessions`, {
@@ -1248,6 +1477,10 @@ export default function Page() {
           ?.scrollIntoView({ behavior: "smooth" }),
       0,
     );
+  }
+  function scrollToScan() {
+    setScreen("setup");
+    window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 0);
   }
   function addRegion() {
     const id = `region-${Date.now()}`;
@@ -1377,11 +1610,18 @@ export default function Page() {
       const payload = (await response.json()) as {
         flashcards: Omit<NotebookFlashcard, "included">[];
       };
+      if (!payload.flashcards.length) {
+        throw new Error("No safe flashcards were returned for these notes.");
+      }
       setFlashcards(
         payload.flashcards.map((card) => ({ ...card, included: true })),
       );
-      setIsFlashcardDrawerOpen(true);
     } catch (error) {
+      const starterCards = createStarterFlashcards(regions, renderedTypedText);
+      if (starterCards.length) {
+        setFlashcards(starterCards.map((card) => ({ ...card, included: true })));
+        return;
+      }
       setFlashcardError(
         error instanceof Error
           ? error.message
@@ -1430,8 +1670,17 @@ export default function Page() {
           </a>
         </div>
         <div className="topbar-actions">
-          <button className="demo-button" onClick={beginAnalysis}>
-            Run demo <span>↗</span>
+          <button
+            className="study-deck-button"
+            onClick={() => {
+              setFlashcardDrawerMode("library");
+              setIsFlashcardDrawerOpen(true);
+            }}
+          >
+            Study deck
+          </button>
+          <button className="demo-button" onClick={scrollToScan}>
+            Scan my pages <span>↗</span>
           </button>
         </div>
       </nav>
@@ -1490,7 +1739,7 @@ export default function Page() {
                 Scan my pages <span>→</span>
               </button>
               <button className="card-demo-button" onClick={beginAnalysis}>
-                View a finished example <span>↗</span>
+                Run demo <span>↗</span>
               </button>
               <p className="privacy-note">
                 Your photos are used only to create your interactive study view.
@@ -1507,12 +1756,25 @@ export default function Page() {
           <div className="processing-notebook">
             <OpeningNotebook />
           </div>
-          <p className="eyebrow">Creating your interactive notes</p>
-          <h1>
-            Turning your notes into
-            <br />
-            something you can explore.
-          </h1>
+          <div className="processing-copy" key={stage} aria-live="polite">
+            <p className="eyebrow">{activeLoadingCopy.eyebrow}</p>
+            <h1>
+              {activeLoadingCopy.heading}
+              <br />
+              <em>{activeLoadingCopy.emphasis}</em>
+            </h1>
+            <p>{activeLoadingCopy.detail}</p>
+          </div>
+          <div
+            className="processing-progress"
+            role="progressbar"
+            aria-label="Notebook analysis progress"
+            aria-valuemin={0}
+            aria-valuemax={stages.length}
+            aria-valuenow={stage + 1}
+          >
+            <i style={{ width: `${((stage + 1) / stages.length) * 100}%` }} />
+          </div>
           <div className="progress-list">
             {stages.map((item, index) => (
               <div key={item} className={index <= stage ? "done" : ""}>
@@ -1522,7 +1784,6 @@ export default function Page() {
               </div>
             ))}
           </div>
-          <p className="processing-note">Usually takes less than 20 seconds.</p>
         </section>
       )}
 
@@ -1804,12 +2065,29 @@ export default function Page() {
             <div className="trace-actions">
               <button
                 className="secondary-button"
+                disabled={!pageImageDataUrls.some(Boolean)}
+                onClick={() => setIsUploadedImagesOpen(true)}
+              >
+                Uploaded images
+              </button>
+              <button
+                className="secondary-button"
                 disabled={!activeAnalysis || graphStatus === "loading"}
                 onClick={() => void openConceptGraph()}
               >
                 {graphStatus === "loading"
                   ? "Updating graph…"
                   : "Concept graph"}
+              </button>
+              <button
+                className="secondary-button"
+                disabled={isGeneratingFlashcards}
+                onClick={() => {
+                  setFlashcardDrawerMode("review");
+                  setIsFlashcardDrawerOpen(true);
+                }}
+              >
+                {isGeneratingFlashcards ? "Preparing cards…" : "Flashcards"}
               </button>
               <button
                 className={
@@ -1844,15 +2122,6 @@ export default function Page() {
                 }}
               >
                 {isEditingNotes ? "Done editing" : "Edit text"}
-              </button>
-              <button
-                className="primary-button flashcard-button"
-                disabled={isGeneratingFlashcards || !renderedTypedText.trim()}
-                onClick={generateFlashcards}
-              >
-                {isGeneratingFlashcards
-                  ? "Creating cards…"
-                  : "Generate flashcards"}
               </button>
             </div>
           </header>
@@ -2070,6 +2339,68 @@ export default function Page() {
           {flashcardError ? (
             <p className="flashcard-error">{flashcardError}</p>
           ) : null}
+          {isUploadedImagesOpen ? (
+            <div
+              className="uploaded-images-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Compare uploaded notebook images with generated notes"
+            >
+              <section className="uploaded-images-panel">
+                <header>
+                  <div>
+                    <p className="eyebrow">Cross-check your scan</p>
+                    <h2>Original page, clearer notes.</h2>
+                  </div>
+                  <button
+                    className="text-button"
+                    onClick={() => setIsUploadedImagesOpen(false)}
+                  >
+                    Close
+                  </button>
+                </header>
+                <div className="uploaded-image-tabs" aria-label="Uploaded notebook pages">
+                  {pageImageDataUrls.map((url, index) => (
+                    <button
+                      key={`${url.slice(0, 24)}-${index}`}
+                      type="button"
+                      className={index === activePageIndex ? "active" : ""}
+                      onClick={() => showPage(index)}
+                    >
+                      Page {index + 1}
+                    </button>
+                  ))}
+                </div>
+                <div className="uploaded-image-comparison">
+                  <article>
+                    <p>Uploaded image</p>
+                    {pageImageDataUrls[activePageIndex] ? (
+                      <img
+                        src={pageImageDataUrls[activePageIndex]}
+                        alt={`Uploaded notebook page ${activePageIndex + 1}`}
+                      />
+                    ) : null}
+                  </article>
+                  <article className="comparison-notes">
+                    <p>Generated study notes</p>
+                    <h3>
+                      {structuredNotebookLayout?.heading ??
+                        extractedNotebookHeading ??
+                        activeAnalysis?.pageSummary ??
+                        `Notebook page ${activePageIndex + 1}`}
+                    </h3>
+                    <InteractiveNotebookText
+                      text={renderedTypedText}
+                      regions={regions}
+                      selectedId={selectedId}
+                      onSelect={setSelectedId}
+                      showHeading={false}
+                    />
+                  </article>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </section>
       )}
 
@@ -2087,110 +2418,22 @@ export default function Page() {
             status={graphStatus}
             onRetry={() => void retryGraph()}
             onOpenSource={openGraphSource}
-            onCreateFlashcards={() => void generateFlashcards()}
           />
         </section>
       )}
 
       {isFlashcardDrawerOpen ? (
-        <div
-          className="flashcard-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Review flashcards"
-        >
-          <div className="flashcard-drawer">
-            <header>
-              <div>
-                <p className="eyebrow">Study cards from your notes</p>
-                <h2>Review flashcards</h2>
-              </div>
-              <button
-                className="text-button"
-                onClick={() => setIsFlashcardDrawerOpen(false)}
-              >
-                Close
-              </button>
-            </header>
-            <p className="flashcard-drawer-copy">
-              Edit a card, remove any you do not want, then save the set for
-              this session.
-            </p>
-            <div className="notebook-flashcards">
-              {flashcards.map((card) => (
-                <article
-                  key={card.id}
-                  className={card.included ? "" : "excluded"}
-                >
-                  <label>
-                    Question
-                    <textarea
-                      value={card.question}
-                      onChange={(event) =>
-                        setFlashcards((current) =>
-                          current.map((item) =>
-                            item.id === card.id
-                              ? { ...item, question: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label>
-                    Answer
-                    <textarea
-                      value={card.answer}
-                      onChange={(event) =>
-                        setFlashcards((current) =>
-                          current.map((item) =>
-                            item.id === card.id
-                              ? { ...item, answer: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <footer>
-                    <span>
-                      {card.source_phrase
-                        ? `From “${card.source_phrase}”`
-                        : "From your notes"}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() =>
-                        setFlashcards((current) =>
-                          current.map((item) =>
-                            item.id === card.id
-                              ? { ...item, included: !item.included }
-                              : item,
-                          ),
-                        )
-                      }
-                    >
-                      {card.included ? "Remove" : "Include"}
-                    </button>
-                  </footer>
-                </article>
-              ))}
-            </div>
-            <footer className="flashcard-drawer-footer">
-              <span>
-                {flashcards.filter((card) => card.included).length} cards ready
-              </span>
-              <button
-                className="primary-button"
-                onClick={() => setIsFlashcardDrawerOpen(false)}
-              >
-                Save cards
-              </button>
-            </footer>
-          </div>
-        </div>
+        <FlashcardStudyDeck
+          cards={flashcards.filter((card) => card.included)}
+          studySet={screen === "trace" || screen === "graph" ? currentStudySet : undefined}
+          initialMode={flashcardDrawerMode}
+          onClose={() => setIsFlashcardDrawerOpen(false)}
+          onOpenStudySet={openSavedStudySet}
+          onShareStudySet={shareStudySet}
+        />
       ) : null}
+
+      {screen === "trace" || screen === "graph" ? <FocusTimer /> : null}
 
       {screen === "cards" && (
         <section className="cards-view">
