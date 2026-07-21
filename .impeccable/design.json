@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-21T00:00:00+08:00",
+  "title": "Design System: Traceback",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "neutral", "displayName": "Graphite", "canonical": "#3f3b36", "tonalRamp": ["#211f1d", "#3f3b36", "#625d56", "#837c73", "#a7a096", "#cbc5bd", "#e5e0da", "#f7f3ed"] },
+      "burgundy": { "role": "primary", "displayName": "Burgundy Ink", "canonical": "#4d0e12", "tonalRamp": ["#260709", "#4d0e12", "#742027", "#98434a", "#bb6d72", "#d69b9e", "#edcacc", "#faeeee"] },
+      "ruled-blue": { "role": "secondary", "displayName": "Ruled Blue", "canonical": "#a5bcd6", "tonalRamp": ["#1e2b39", "#354b62", "#506c89", "#718dab", "#93aec9", "#b6cbe0", "#d7e3ee", "#f1f6fa"] },
+      "paper": { "role": "neutral", "displayName": "Notebook Paper", "canonical": "#f7f3ed", "tonalRamp": ["#282521", "#4a453e", "#6d665c", "#90887c", "#b4ab9f", "#d3cbc1", "#e9e3db", "#f7f3ed"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Notebook Display", "purpose": "Major study titles only." },
+      "body": { "displayName": "Product Body", "purpose": "Controls, explanations, and study content." },
+      "label": { "displayName": "Compact Label", "purpose": "Navigation, states, and metadata." }
+    },
+    "shadows": [
+      { "name": "workspace-ambient", "value": "0 18px 46px #4d0e1215", "purpose": "Active notebook and graph work surfaces." },
+      { "name": "raised-control", "value": "0 12px 22px #4d0e1228", "purpose": "Primary actions and floating editing tools." },
+      { "name": "drawer", "value": "-16px 0 40px #2318152d", "purpose": "Right-side detail and review drawers." }
+    ],
+    "motion": [
+      { "name": "state-change", "value": "180ms ease-out", "purpose": "Selection, hover, and graph detail changes." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "800px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action on a scan or study screen.",
+      "html": "<button class=\"ds-btn-primary\">SCAN PAGE</button>",
+      "css": ".ds-btn-primary { border: 1px solid #4d0e12; border-radius: 12px; padding: 15px 18px; background: #4d0e12; color: #fffdf8; font: 800 11px/1.2 Arial, Helvetica, sans-serif; letter-spacing: .08em; transition: transform 180ms ease-out, box-shadow 180ms ease-out; } .ds-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 22px #4d0e1228; } .ds-btn-primary:focus-visible { outline: 3px solid #4d0e12; outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A quiet secondary study action.",
+      "html": "<button class=\"ds-btn-secondary\">VIEW GRAPH</button>",
+      "css": ".ds-btn-secondary { border: 1px solid #d9cec0; border-radius: 12px; padding: 13px 17px; background: #fffdf8; color: #4d0e12; font: 800 11px/1.2 Arial, Helvetica, sans-serif; letter-spacing: .08em; } .ds-btn-secondary:hover { background: #f7f3ed; border-color: #4d0e12; } .ds-btn-secondary:focus-visible { outline: 3px solid #4d0e12; outline-offset: 3px; }"
+    },
+    {
+      "name": "Notebook Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "An editable concept or note label.",
+      "html": "<label class=\"ds-field\">CONCEPT NAME<input value=\"Cellular respiration\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: #4d0e12; font: 800 11px/1.2 Arial, Helvetica, sans-serif; letter-spacing: .08em; } .ds-field input { padding: 10px 12px; border: 1px solid #d9cec0; border-radius: 8px; background: #fffdf8; color: #3f3b36; font: 400 16px/1.4 Arial, Helvetica, sans-serif; } .ds-field input:focus-visible { outline: 3px solid #a5bcd666; border-color: #4d0e12; }"
+    },
+    {
+      "name": "Concept Node",
+      "kind": "custom",
+      "description": "A concise graph node tied to scanned notebook content.",
+      "html": "<button class=\"ds-concept-node\"><span>ATP production</span><small>PAGE 2</small></button>",
+      "css": ".ds-concept-node { display: grid; gap: 5px; min-width: 150px; padding: 12px 14px; border: 1px solid #a5bcd6; border-radius: 12px; background: #fffdf8; color: #3f3b36; text-align: left; } .ds-concept-node span { font: 800 14px/1.25 Arial, Helvetica, sans-serif; } .ds-concept-node small { color: #746d65; font: 800 10px/1 Arial, Helvetica, sans-serif; letter-spacing: .08em; } .ds-concept-node:hover { background: #f7f3ed; } .ds-concept-node:focus-visible { outline: 3px solid #4d0e12; outline-offset: 3px; }"
+    },
+    {
+      "name": "Study Navigation",
+      "kind": "nav",
+      "description": "Compact navigation between scanned pages, notes, graph, and cards.",
+      "html": "<nav class=\"ds-nav\"><a class=\"active\">NOTES</a><a>GRAPH</a><a>CARDS</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 28px; color: #746d65; font: 800 11px/1.2 Arial, Helvetica, sans-serif; letter-spacing: .08em; } .ds-nav a { color: inherit; text-decoration: none; } .ds-nav a:hover, .ds-nav a.active { color: #4d0e12; } .ds-nav a:focus-visible { outline: 3px solid #4d0e12; outline-offset: 3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Connected Notebook",
+    "overview": "Traceback should feel like a carefully organized notebook coming alive. Warm paper, faint ruled structure, burgundy ink, and soft blue marks preserve the familiarity of handwritten study while making relationships clear and interactive.",
+    "keyCharacteristics": ["Warm stationery surfaces with restrained academic color.", "Familiar product controls paired with notebook-specific details.", "Clear selected states and readable relationship lines.", "Ambient depth around major work surfaces, not every element."],
+    "rules": [
+      { "name": "The Ink-and-Rule Rule", "body": "Burgundy signals action or connection; blue signals detected or selected notebook material.", "section": "colors" },
+      { "name": "The Handwritten Accent Rule", "body": "Serif italics identify notebook content; they never label controls, navigation, or graph tooling.", "section": "typography" },
+      { "name": "The One-Surface Rule", "body": "Elevate the active workspace, not every node, row, or label.", "section": "elevation" }
+    ],
+    "dos": ["Do preserve the warm paper, burgundy ink, ruled-blue, and graphite hierarchy.", "Do use standard buttons, tabs, drawers, and keyboard navigation.", "Do keep graph nodes concise and reveal detail on selection.", "Do pair color with labels, outlines, or shapes."],
+    "donts": ["Don't build dense analytics dashboards.", "Don't use generic AI interfaces or decorative complexity.", "Don't make the concept graph feel like a specialist data-analysis tool.", "Don't place every node inside a shadowed card.", "Don't use gradients, glassmorphism, neon graph lines, or decorative motion."]
+  }
+}
