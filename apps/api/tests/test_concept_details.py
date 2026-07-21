@@ -7,7 +7,7 @@ from app.schemas.concept_details import ConceptDetailsRequest
 from app.services.concept_details import get_concept_details
 
 
-def test_concept_details_uses_safe_search_fallback() -> None:
+def test_concept_details_returns_no_sources_when_search_is_unavailable() -> None:
     result = get_concept_details(
         ConceptDetailsRequest(label="Mitochondria"),
         Settings(
@@ -20,7 +20,7 @@ def test_concept_details_uses_safe_search_fallback() -> None:
     assert result.label == "Mitochondria"
     assert result.confidence == 0.0
     assert result.warnings == ["gemini_api_key_missing_using_search_links"]
-    assert result.sources[0].url.endswith("Mitochondria")
+    assert result.sources == []
 
 
 def test_concept_details_uses_the_selected_note_as_a_fallback_definition() -> None:
@@ -48,7 +48,7 @@ def test_concept_details_endpoint_returns_contract() -> None:
 
     assert response.status_code == 200
     assert response.json()["label"] == "Mitochondria"
-    assert len(response.json()["sources"]) == 3
+    assert response.json()["sources"] == []
 
 
 def test_concept_details_uses_openai_search_fallback_without_api_key() -> None:
@@ -65,7 +65,7 @@ def test_concept_details_uses_openai_search_fallback_without_api_key() -> None:
     assert result.warnings == ["openai_api_key_missing_using_search_links"]
 
 
-def test_concept_details_uses_precomputed_terra_explanation_and_approved_sources() -> None:
+def test_concept_details_uses_precomputed_explanation_without_fabricated_sources() -> None:
     result = get_concept_details(
         ConceptDetailsRequest(
             label="Mitochondria",
@@ -80,15 +80,10 @@ def test_concept_details_uses_precomputed_terra_explanation_and_approved_sources
 
     assert result.definition == "Mitochondria help cells produce usable energy."
     assert result.warnings == ["precomputed_terra_explanation_used"]
-    assert [source.title for source in result.sources] == [
-        "OpenStax on Mitochondria",
-        "Nature Education on Mitochondria",
-        "Khan Academy on Mitochondria",
-    ]
-    assert all("mitochondria+cellular+energy" in source.url for source in result.sources)
+    assert result.sources == []
 
 
-def test_concept_details_uses_medical_sources_for_microbiology() -> None:
+def test_concept_details_does_not_fabricate_medical_sources() -> None:
     result = get_concept_details(
         ConceptDetailsRequest(label="Microbes are ubiquitous"),
         Settings(
@@ -97,8 +92,4 @@ def test_concept_details_uses_medical_sources_for_microbiology() -> None:
         ),
     )
 
-    assert [source.title for source in result.sources] == [
-        "CDC resources on Microbes are ubiquitous",
-        "PubMed research on Microbes are ubiquitous",
-        "NCBI Bookshelf on Microbes are ubiquitous",
-    ]
+    assert result.sources == []

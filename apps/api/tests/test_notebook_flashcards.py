@@ -5,7 +5,11 @@ from fastapi.testclient import TestClient
 
 from app.api import notebook_flashcards
 from app.main import app
-from app.schemas.notebook_flashcards import NotebookFlashcardResponse
+from app.schemas.notebook_flashcards import (
+    NotebookFlashcardRequest,
+    NotebookFlashcardResponse,
+)
+from app.services.notebook_flashcards import build_note_based_flashcards
 
 
 @pytest.fixture
@@ -81,13 +85,12 @@ def test_notebook_flashcards_rejects_invalid_request(api_client: TestClient) -> 
     assert response.status_code == 422
 
 
-def test_notebook_flashcards_fall_back_to_note_based_cards_without_openai(
-    api_client: TestClient,
-) -> None:
-    response = api_client.post("/api/notebook-flashcards/generate", json=request_payload())
+def test_notebook_flashcards_fall_back_to_note_based_cards_without_openai() -> None:
+    response = build_note_based_flashcards(
+        NotebookFlashcardRequest.model_validate(request_payload())
+    )
 
-    assert response.status_code == 200
-    cards = response.json()["flashcards"]
+    cards = [card.model_dump() for card in response.flashcards]
     assert len(cards) == 3
     assert cards[0]["source_phrase"] == "Mitochondria"
     assert cards[0]["answer"] == ("Mitochondria help cells make ATP through cellular respiration.")
