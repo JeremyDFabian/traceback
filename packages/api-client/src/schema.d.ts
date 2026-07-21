@@ -328,6 +328,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/shared-study-sets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Shared Study Set */
+    post: operations["create_shared_study_set_api_shared_study_sets_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/shared-study-sets/{share_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Shared Study Set */
+    get: operations["get_shared_study_set_api_shared_study_sets__share_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -652,6 +686,24 @@ export interface components {
        */
       updated_at: string;
     };
+    "JsonValue-Input":
+      | string
+      | number
+      | boolean
+      | components["schemas"]["JsonValue-Input"][]
+      | {
+          [key: string]: components["schemas"]["JsonValue-Input"];
+        }
+      | null;
+    "JsonValue-Output":
+      | string
+      | number
+      | boolean
+      | components["schemas"]["JsonValue-Output"][]
+      | {
+          [key: string]: components["schemas"]["JsonValue-Output"];
+        }
+      | null;
     /** MatchResponse */
     MatchResponse: {
       /** Highlight Boxes */
@@ -874,6 +926,26 @@ export interface components {
        */
       updated_at: string;
     };
+    /**
+     * SharedStudySetRequest
+     * @description The browser sends typed notes and cards, never the original image scans.
+     */
+    SharedStudySetRequest: {
+      /** Cards */
+      cards?: components["schemas"]["app__api__shared_study_sets__StudySetPayload-Input__2"][];
+      study_set: components["schemas"]["app__api__shared_study_sets__StudySetPayload__1"];
+    };
+    /** SharedStudySetResponse */
+    SharedStudySetResponse: {
+      /** Cards */
+      cards: components["schemas"]["StudySetPayload-Output"][];
+      /** Id */
+      id: string;
+      study_set: components["schemas"]["StudySetPayload-Output"];
+    };
+    "StudySetPayload-Output": {
+      [key: string]: components["schemas"]["JsonValue-Output"];
+    };
     /** TextSpan */
     TextSpan: {
       /** Height */
@@ -914,6 +986,12 @@ export interface components {
       msg: string;
       /** Error Type */
       type: string;
+    };
+    "app__api__shared_study_sets__StudySetPayload-Input__2": {
+      [key: string]: components["schemas"]["JsonValue-Input"];
+    };
+    app__api__shared_study_sets__StudySetPayload__1: {
+      [key: string]: components["schemas"]["JsonValue-Input"];
     };
   };
   responses: never;
@@ -1544,6 +1622,70 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["MatchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_shared_study_set_api_shared_study_sets_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SharedStudySetRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SharedStudySetResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_shared_study_set_api_shared_study_sets__share_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        share_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SharedStudySetResponse"];
         };
       };
       /** @description Validation Error */
