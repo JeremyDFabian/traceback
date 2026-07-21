@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -478,7 +477,7 @@ export function FlashcardStudyDeck({
                     : "Tap to reveal the answer"}
                 </small>
                 {active.source_phrase ? (
-                  <em>From "{active.source_phrase}"</em>
+                  <em>From “{active.source_phrase}”</em>
                 ) : null}
               </button>
             </div>

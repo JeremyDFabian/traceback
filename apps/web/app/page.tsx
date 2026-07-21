@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/immutability */
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
