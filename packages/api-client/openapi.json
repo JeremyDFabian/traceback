@@ -786,6 +786,68 @@
         "title": "JobResponse",
         "type": "object"
       },
+      "JsonValue-Input": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "JsonValue-Output": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "MatchResponse": {
         "properties": {
           "highlight_boxes": {
@@ -1350,6 +1412,52 @@
         "title": "SessionResponse",
         "type": "object"
       },
+      "SharedStudySetRequest": {
+        "description": "The browser sends typed notes and cards, never the original image scans.",
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/app__api__shared_study_sets__StudySetPayload-Input__2"
+            },
+            "maxItems": 200,
+            "title": "Cards",
+            "type": "array"
+          },
+          "study_set": {
+            "$ref": "#/components/schemas/app__api__shared_study_sets__StudySetPayload__1"
+          }
+        },
+        "required": ["study_set"],
+        "title": "SharedStudySetRequest",
+        "type": "object"
+      },
+      "SharedStudySetResponse": {
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/StudySetPayload-Output"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "study_set": {
+            "$ref": "#/components/schemas/StudySetPayload-Output"
+          }
+        },
+        "required": ["id", "study_set", "cards"],
+        "title": "SharedStudySetResponse",
+        "type": "object"
+      },
+      "StudySetPayload-Output": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/JsonValue-Output"
+        },
+        "type": "object"
+      },
       "TextSpan": {
         "properties": {
           "height": {
@@ -1432,6 +1540,19 @@
         },
         "required": ["loc", "msg", "type"],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "app__api__shared_study_sets__StudySetPayload-Input__2": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/JsonValue-Input"
+        },
+        "type": "object"
+      },
+      "app__api__shared_study_sets__StudySetPayload__1": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/JsonValue-Input"
+        },
+        "maxProperties": 1000000,
         "type": "object"
       }
     }
@@ -2299,6 +2420,85 @@
         },
         "summary": "Match Session Region",
         "tags": ["matches"]
+      }
+    },
+    "/api/shared-study-sets": {
+      "post": {
+        "operationId": "create_shared_study_set_api_shared_study_sets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SharedStudySetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedStudySetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Shared Study Set",
+        "tags": ["shared study sets"]
+      }
+    },
+    "/api/shared-study-sets/{share_id}": {
+      "get": {
+        "operationId": "get_shared_study_set_api_shared_study_sets__share_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedStudySetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Shared Study Set",
+        "tags": ["shared study sets"]
       }
     }
   }
