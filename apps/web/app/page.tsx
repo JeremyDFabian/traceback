@@ -203,6 +203,59 @@ const seededRegions: Region[] = [
   },
 ];
 
+const demoPageAnalysis: PageAnalysis = {
+  pageSummary: "Cellular respiration",
+  typedText: demoTypedText,
+  regions: seededRegions,
+  relationships: [
+    {
+      id: "respiration-to-mitochondria",
+      source_region_id: "respiration",
+      target_region_id: "mitochondria",
+      label: "takes place in",
+      confidence: 0.96,
+    },
+    {
+      id: "mitochondria-to-atp",
+      source_region_id: "mitochondria",
+      target_region_id: "atp",
+      label: "helps produce",
+      confidence: 0.96,
+    },
+  ],
+  warnings: [],
+};
+
+const demoConceptGraph: ConceptGraphData = {
+  nodes: seededRegions.map((region) => ({
+    id: region.id,
+    label: region.label,
+    type: region.type,
+    confidence: region.confidence / 100,
+    sources: [
+      {
+        page_id: "page-1",
+        region_id: region.id,
+        excerpt: region.transcription ?? demoTypedText,
+        bbox: {
+          x: region.x / 100,
+          y: region.y / 100,
+          width: region.width / 100,
+          height: region.height / 100,
+        },
+      },
+    ],
+  })),
+  edges: demoPageAnalysis.relationships.map((relationship) => ({
+    id: relationship.id,
+    source: relationship.source_region_id,
+    target: relationship.target_region_id,
+    label: relationship.label,
+    confidence: relationship.confidence,
+    review_required: false,
+  })),
+};
+
 const stages = [
   "Reading handwriting with OCR",
   "Extracting clean typed text",
@@ -290,7 +343,15 @@ function UploadField({
         onChange={onChange}
       />
       <span className="upload-icon" aria-hidden="true">
-        {accept === "application/pdf" ? "↗" : "⌁"}
+        {accept === "application/pdf" ? (
+          "↗"
+        ) : (
+          <span className="upload-notebook-icon">
+            <i />
+            <i />
+            <i />
+          </span>
+        )}
       </span>
       <span>
         <strong>
@@ -1019,6 +1080,7 @@ export default function Page() {
   const [pageAnalyses, setPageAnalyses] = useState<PageAnalysis[]>([]);
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [isLiveAnalysis, setIsLiveAnalysis] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [analysisError, setAnalysisError] = useState<string>();
   const prefetchedConceptDetails = useRef(
     new Map<string, ConceptDetailsResult>(),
@@ -1259,6 +1321,7 @@ export default function Page() {
     setNotebooks([]);
     setImageUrl(undefined);
     setPageImageDataUrls([]);
+    setIsDemoMode(false);
   }
   function beginAnalysis() {
     setAnalysisError(undefined);
@@ -1269,12 +1332,14 @@ export default function Page() {
     automaticFlashcardsStarted.current = false;
 
     if (notebooks.length) {
+      setIsDemoMode(false);
       void analyzeNotebookPages();
       return;
     }
 
     setIsLiveAnalysis(false);
-    setPageAnalyses([]);
+    setIsDemoMode(true);
+    setPageAnalyses([demoPageAnalysis]);
     setActivePageIndex(0);
     setRegions(seededRegions);
     setSelectedId(seededRegions[0].id);
@@ -1345,6 +1410,7 @@ export default function Page() {
     if (!firstPage) return;
 
     setNotebooks([]);
+    setIsDemoMode(false);
     setStudySetIdOverride(savedStudySet.id);
     setPageAnalyses(restoredPages);
     setPageImageDataUrls(
@@ -1486,6 +1552,12 @@ export default function Page() {
   }
   async function openConceptGraph() {
     setGraphStatus("loading");
+    if (isDemoMode) {
+      setGraph(demoConceptGraph);
+      setGraphStatus("ready");
+      setScreen("graph");
+      return;
+    }
     try {
       const approvedPage = await approveActivePage();
       setScreen("graph");
@@ -2138,66 +2210,72 @@ export default function Page() {
               </p>
             </div>
             <div className="trace-actions">
-              <button
-                className="secondary-button"
-                disabled={!pageImageDataUrls.some(Boolean)}
-                onClick={() => setIsUploadedImagesOpen(true)}
-              >
-                Uploaded images
-              </button>
-              <button
-                className="secondary-button"
-                disabled={!activeAnalysis || graphStatus === "loading"}
-                onClick={() => void openConceptGraph()}
-              >
-                {graphStatus === "loading"
-                  ? "Updating graph..."
-                  : "Concept graph"}
-              </button>
-              <button
-                className="secondary-button"
-                disabled={isGeneratingFlashcards}
-                onClick={() => {
-                  setFlashcardDrawerMode("review");
-                  setIsFlashcardDrawerOpen(true);
-                }}
-              >
-                {isGeneratingFlashcards ? "Preparing cards..." : "Flashcards"}
-              </button>
-              <button
-                className={
-                  isAnnotating ? "secondary-button active" : "secondary-button"
-                }
-                onClick={() => {
-                  setIsAnnotating((current) => !current);
-                  setIsEditingNotes(false);
-                  setSelectedNoteText("");
-                  setSelectionPosition(undefined);
-                  setAnnotationHint(
-                    "Select a short phrase on the page to add a highlighter.",
-                  );
-                }}
-              >
-                {isAnnotating ? "Done annotating" : "Annotate"}
-              </button>
-              <button
-                className={
-                  isEditingNotes
-                    ? "secondary-button active"
-                    : "secondary-button"
-                }
-                onClick={() => {
-                  setIsEditingNotes((current) => !current);
-                  setIsAnnotating(false);
-                  setSelectedNoteText("");
-                  setSelectionPosition(undefined);
-                  setAnnotationHint(
-                    "Select a short phrase on the page to add a highlighter.",
-                  );
-                }}
-              >
-                {isEditingNotes ? "Done editing" : "Edit text"}
-              </button>
+              <div className="trace-action-group trace-study-actions">
+                <button
+                  className="secondary-button study-action graph-action"
+                  disabled={!activeAnalysis || graphStatus === "loading"}
+                  onClick={() => void openConceptGraph()}
+                >
+                  {graphStatus === "loading"
+                    ? "Updating graph..."
+                    : "Concept graph"}
+                </button>
+                <button
+                  className="secondary-button study-action flashcards-action"
+                  disabled={isGeneratingFlashcards}
+                  onClick={() => {
+                    setFlashcardDrawerMode("review");
+                    setIsFlashcardDrawerOpen(true);
+                  }}
+                >
+                  {isGeneratingFlashcards ? "Preparing cards..." : "Flashcards"}
+                </button>
+              </div>
+              <div className="trace-action-group trace-note-actions">
+                <button
+                  className="secondary-button"
+                  disabled={!pageImageDataUrls.some(Boolean)}
+                  onClick={() => setIsUploadedImagesOpen(true)}
+                >
+                  Uploaded images
+                </button>
+                <button
+                  className={
+                    isAnnotating
+                      ? "secondary-button active"
+                      : "secondary-button"
+                  }
+                  onClick={() => {
+                    setIsAnnotating((current) => !current);
+                    setIsEditingNotes(false);
+                    setSelectedNoteText("");
+                    setSelectionPosition(undefined);
+                    setAnnotationHint(
+                      "Select a short phrase on the page to add a highlighter.",
+                    );
+                  }}
+                >
+                  {isAnnotating ? "Done annotating" : "Annotate"}
+                </button>
+                <button
+                  className={
+                    isEditingNotes
+                      ? "secondary-button active"
+                      : "secondary-button"
+                  }
+                  onClick={() => {
+                    setIsEditingNotes((current) => !current);
+                    setIsAnnotating(false);
+                    setSelectedNoteText("");
+                    setSelectionPosition(undefined);
+                    setAnnotationHint(
+                      "Select a short phrase on the page to add a highlighter.",
+                    );
+                  }}
+                >
+                  {isEditingNotes ? "Done editing" : "Edit text"}
+                </button>
+              </div>
             </div>
           </header>
           <div className="interactive-pdf-layout">
@@ -2322,12 +2400,12 @@ export default function Page() {
               <aside key={selected.id} className="concept-detail">
                 <p className="eyebrow">About this highlight</p>
                 <div className="concept-title">
-                  <span>
-                    {selected.marker === "star"
-                      ? "★"
-                      : selected.marker === "question"
-                        ? "?"
-                        : "⌁"}
+                  <span className="study-tools-icon" aria-hidden="true">
+                    <i className="mini-notebook">
+                      <b />
+                      <b />
+                      <b />
+                    </i>
                   </span>
                   <h2>{selected.label}</h2>
                 </div>

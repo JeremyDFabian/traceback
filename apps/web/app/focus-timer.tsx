@@ -10,6 +10,7 @@ export function FocusTimer() {
   const [mode, setMode] = useState<TimerMode>("focus");
   const [secondsLeft, setSecondsLeft] = useState(durationFor("focus"));
   const [isRunning, setIsRunning] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragStart = useRef<
     { x: number; y: number; offsetX: number; offsetY: number } | undefined
@@ -71,6 +72,20 @@ export function FocusTimer() {
     });
   }
 
+  if (isCollapsed) {
+    return (
+      <button
+        type="button"
+        className="focus-timer-toggle"
+        aria-label="Show focus session timer"
+        onClick={() => setIsCollapsed(false)}
+      >
+        <span aria-hidden="true">◷</span>
+        {mode === "focus" ? "Focus" : "Break"} {minutes}:{seconds}
+      </button>
+    );
+  }
+
   return (
     <aside
       className="floating-focus-timer"
@@ -88,6 +103,14 @@ export function FocusTimer() {
       <div className="focus-timer-heading">
         <span aria-hidden="true">⠿</span>
         <p>{mode === "focus" ? "Focus session" : "Short break"}</p>
+        <button
+          type="button"
+          className="focus-timer-hide"
+          aria-label="Hide focus session timer"
+          onClick={() => setIsCollapsed(true)}
+        >
+          Hide
+        </button>
       </div>
       <strong aria-live="polite">
         {minutes}:{seconds}
