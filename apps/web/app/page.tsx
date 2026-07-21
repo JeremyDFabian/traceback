@@ -1159,17 +1159,6 @@ export default function Page() {
     return () => window.clearInterval(timer);
   }, [isLiveAnalysis, screen]);
   useEffect(() => {
-    if (
-      screen !== "trace" ||
-      automaticFlashcardsStarted.current ||
-      !renderedTypedText.trim()
-    ) {
-      return;
-    }
-    automaticFlashcardsStarted.current = true;
-    void generateFlashcards();
-  }, [screen, renderedTypedText]);
-  useEffect(() => {
     if (screen !== "trace" || !selected) return;
 
     const highlightId = selected.id;
@@ -1641,6 +1630,17 @@ export default function Page() {
       setIsGeneratingFlashcards(false);
     }
   }
+  useEffect(() => {
+    if (
+      screen !== "trace" ||
+      automaticFlashcardsStarted.current ||
+      !renderedTypedText.trim()
+    ) {
+      return;
+    }
+    automaticFlashcardsStarted.current = true;
+    void generateFlashcards();
+  }, [screen, renderedTypedText]);
   return (
     <main className="app-shell">
       <nav className="topbar" aria-label="Primary navigation">

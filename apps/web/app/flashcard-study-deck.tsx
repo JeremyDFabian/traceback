@@ -114,16 +114,14 @@ export function FlashcardStudyDeck({
   );
 
   useEffect(() => {
-    if (!studySet) return;
-    setActiveSetId((current) => current ?? studySet.id);
-  }, [studySet]);
-
-  useEffect(() => {
     const signature = JSON.stringify({ incoming, studySet });
     if (signature === savedIncoming.current) return;
     savedIncoming.current = signature;
     if (!incoming.length && !studySet) return;
 
+    // Persisting a newly generated set is the deliberate synchronization point
+    // between incoming analysis results and the learner's local study deck.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDeck((current) => {
       const existing = new Map(current.cards.map((card) => [card.id, card]));
       const incomingIds = new Set(incoming.map((card) => card.id));
