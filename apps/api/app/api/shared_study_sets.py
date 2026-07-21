@@ -16,11 +16,15 @@ type JsonValue = str | int | float | bool | None | list["JsonValue"] | dict[str,
 type StudySetPayload = dict[str, JsonValue]
 
 
+def _empty_cards() -> list[StudySetPayload]:
+    return []
+
+
 class SharedStudySetRequest(BaseModel):
     """The browser sends typed notes and cards, never the original image scans."""
 
     study_set: StudySetPayload = Field(..., max_length=1_000_000)
-    cards: list[StudySetPayload] = Field(default_factory=list, max_length=200)
+    cards: list[StudySetPayload] = Field(default_factory=_empty_cards, max_length=200)
 
 
 class SharedStudySetResponse(BaseModel):
